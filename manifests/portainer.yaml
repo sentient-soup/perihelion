@@ -1,0 +1,141 @@
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: portainer-sa-clusteradmin
+  namespace: portals
+  labels:
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+    app.kubernetes.io/version: "ce-2.21.5"
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: portainer
+  namespace: portals  
+  annotations:
+    volume.alpha.kubernetes.io/storage-class: "generic"
+  labels:
+    io.portainer.kubernetes.application.stack: portainer
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+    app.kubernetes.io/version: "ce-2.21.5"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: portainer
+  labels:
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+    app.kubernetes.io/version: "ce-2.21.5"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  namespace: portals
+  name: portainer-sa-clusteradmin
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: portainer
+  namespace: portals
+  labels:
+    io.portainer.kubernetes.application.stack: portainer
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+    app.kubernetes.io/version: "ce-2.21.5"
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 9000
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 9443
+      protocol: TCP
+      name: https
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: edge
+  selector:
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: portainer
+  namespace: portals
+  labels:
+    io.portainer.kubernetes.application.stack: portainer
+    app.kubernetes.io/name: portainer
+    app.kubernetes.io/instance: portainer
+    app.kubernetes.io/version: "ce-2.21.5"
+spec:
+  replicas: 1
+  strategy:
+    type: "Recreate"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: portainer
+      app.kubernetes.io/instance: portainer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: portainer
+        app.kubernetes.io/instance: portainer
+    spec:
+      nodeSelector:
+        {}
+      serviceAccountName: portainer-sa-clusteradmin
+      volumes:
+        - name: "data"
+          persistentVolumeClaim:
+            claimName: portainer
+      containers:
+        - name: portainer
+          image: "portainer/portainer-ce:2.21.5"
+          imagePullPolicy: Always
+          args:          
+          volumeMounts:
+            - name: data
+              mountPath: /data              
+          ports:
+            - name: http
+              containerPort: 9000
+              protocol: TCP
+            - name: https
+              containerPort: 9443
+              protocol: TCP              
+            - name: tcp-edge
+              containerPort: 8000
+              protocol: TCP              
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9443
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9443
+              scheme: HTTPS
+          resources:
+            {}

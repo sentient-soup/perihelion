@@ -1,0 +1,21 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: network
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: portals
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: apps

@@ -1,0 +1,166 @@
+# Docker compose file for reference
+# # More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+# services:
+#   pihole:
+#     container_name: pihole
+#     image: pihole/pihole:latest
+#     # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+#     ports:
+#       - "53:53/tcp"
+#       - "53:53/udp"
+#       - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+#       - "80:80/tcp"
+#     environment:
+#       TZ: 'America/Chicago'
+#       # WEBPASSWORD: 'set a secure password here or it will be random'
+#     # Volumes store your data between container upgrades
+#     volumes:
+#       - './etc-pihole:/etc/pihole'
+#       - './etc-dnsmasq.d:/etc/dnsmasq.d'
+#     #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+#     cap_add:
+#       - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+#     restart: unless-stopped
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local
+  namespace: network
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pihole-etc
+  namespace: network
+  annotations:
+    volume.alpha.kubernetes.io/storage-class: "generic"
+  labels:
+    io.portainer.kubernetes.application.stack: pihole
+    app.kubernetes.io/name: pihole
+    app.kubernetes.io/instance: pihole
+    app.kubernetes.io/version: "2024.07.0"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pihole-dnsmasq
+  namespace: network
+  annotations:
+    volume.alpha.kubernetes.io/storage-class: "generic"
+  labels:
+    io.portainer.kubernetes.application.stack: pihole
+    app.kubernetes.io/name: pihole
+    app.kubernetes.io/instance: pihole
+    app.kubernetes.io/version: "2024.07.0"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pihole
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: pihole
+    app.kubernetes.io/name: pihole
+    app.kubernetes.io/instance: pihole
+    app.kubernetes.io/version: "2024.07.0"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: pihole-admin
+  - port: 53
+    targetPort: 53
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: 53
+    protocol: UDP
+    name: dns-udp
+  selector:
+    app.kubernetes.io/name: pihole
+    app.kubernetes.io/instance: pihole
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: pihole
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: pihole
+    app.kubernetes.io/name: pihole
+    app.kubernetes.io/instance: pihole
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pihole
+      app.kubernetes.io/instance: pihole
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pihole
+        app.kubernetes.io/instance: pihole
+    spec:
+      volumes:
+        - name: data-etc
+          persistentVolumeClaim:
+            claimName: pihole-etc
+        - name: data-dnsmasq
+          persistentVolumeClaim:
+            claimName: pihole-dnsmasq
+      containers:
+        - name: pihole
+          image: "pihole/pihole:2024.07.0"
+          imagePullPolicy: Always
+          env:
+            - name: TZ
+              value: "America/Denver"
+            - name: WEBPASSWORD
+              value: "admin"
+          volumeMounts:
+            - name: data-etc
+              mountPath: "/etc/pihole"
+            - name: data-dnsmasq
+              mountPath: "/etc/dnsmasq.d"
+          ports:
+            - name: pihole-admin
+              containerPort: 80
+              protocol: TCP
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+            - name: dns-udp
+              containerPort: 53
+              protocol: UDP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: 9443
+          #     scheme: HTTPS
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: 9443
+          #     scheme: HTTPS
