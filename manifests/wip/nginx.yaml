@@ -1,0 +1,55 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nginx
+  namespace: default
+  labels:
+    app: nginx
+  annotations: ## Add this annotations for keel ## 
+    keel.sh/policy: minor
+    keel.sh/trigger: poll
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        resources:
+          limits:
+            memory: "20Mi"
+          requests:
+            memory: "10Mi"
+        volumeMounts: 
+        - name: website
+          mountPath: /var/www/html/
+          subPath: www
+        - name: website
+          mountPath: /etc/nginx/conf.d/
+          subPath: nginx
+      volumes:
+        - name: website
+          persistentVolumeClaim:
+            claimName: pvc-nginx
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  selector:
+    app: nginx
+  ports:
+  - name: http
+    targetPort: 80
+    port: 80 

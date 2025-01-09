@@ -6,18 +6,23 @@ Accumulation of manifests, scripts, and config files used to establish the aphel
 
 | Feature                              | (Proposed) Technology                | Completed |
 |--------------------------------------|--------------------------------------|-----------|
-| Replicable setup                     | Bash (Maybe Helm)                    | ❌       |
-| Load balancing                       | Kubernetes                           | ✔️       |
-| Container management                 | Portainer                            | ✔️       |
-| Load balancing & routing             | Traefik & MetalLB                    | ✔️       |
+| Replicable Setup                     | Bash (Maybe Helm)                    | ❌       |
+| Load Balancing                       | Kubernetes                           | ✔️       |
+| Container Management                 | Portainer                            | ✔️       |
+| Load Balancing & Routing             | Traefik & MetalLB                    | ✔️       |
 | DNS management                       | Pihole                               | ✔️       |
-| Network tunneling                    | CloudFlared Tunnel                   | 🔜       |
-| CI/CD capabilities                   | ArgoCD/Github CI                     | ❌       |
-| Certificate management               | Let's Encrypt/Certbot                | ❌       |
-| Game Servers               | Custom scripts              | ❌       |
-| Media Serving                        | Plex                                 | ❌       |
+| Smart Home/Device Integration        | Homeassistant                        | ✔️       |
+| Network Tunneling                    | CloudFlared Tunnel                   | 🔜       |
 | File Serving                         | Nextcloud                            | ❌       |
-| Network topology mapper              | NetAlertX                            | ❌       |
+| Certificate Management               | Let's Encrypt/Certbot (CertManager)  | ❌       |
+| CI/CD Capabilities                   | ArgoCD/Github CI                     | ❌       |
+| Web Serving                          | NginX                                | ❌       |
+| Media Serving                        | Plex                                 | ❌       |
+| Game Servers                         | Custom scripts                       | ❌       |
+| Network Topology Mapper              | NetAlertX                            | ❌       |
+| Version Watchdog                     | Keel.sh                              | ❌       |
+| Metrics Monitoring                   | Portainer or Prometheus/Grafana      | ❌       |
+| Camera/Stream Ingestion              | Shinobi (?)                          | ❌       |
 
 
 ## Future Goals
