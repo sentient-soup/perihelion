@@ -12,8 +12,8 @@ Accumulation of manifests, scripts, and config files used to establish the aphel
 | Load Balancing & Routing             | Traefik & MetalLB                    | ✔️       |
 | DNS management                       | Pihole                               | ✔️       |
 | Smart Home/Device Integration        | Homeassistant                        | ✔️       |
+| File Serving                         | Nextcloud                            | ✔️       |
 | Network Tunneling                    | CloudFlared Tunnel                   | 🔜       |
-| File Serving                         | Nextcloud                            | ❌       |
 | Certificate Management               | Let's Encrypt/Certbot (CertManager)  | ❌       |
 | CI/CD Capabilities                   | ArgoCD/Github CI                     | ❌       |
 | Web Serving                          | NginX                                | ❌       |
