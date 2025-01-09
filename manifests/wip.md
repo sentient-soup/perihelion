@@ -18,16 +18,19 @@ console=serial0,115200 console=tty1 root=PARTUUID=28373ef5-02 rootfstype=ext4 fs
 
 - https://fernandosilva.me/3-node-k3s-cluster-with-etcd-and-metallb-4ddc7dcfb303
 
-## Deploy Pi-Hole
-
-- https://subtlepseudonym.medium.com/pi-hole-on-kubernetes-87fc8cdeeb2e
 
 ## Deploy Cloudflared Tunnel
 
 - https://developers.cloudflare.com/cloudflare-one/tutorials/many-cfd-one-tunnel/
 
-## Deploy Portainer
-
-- https://docs.portainer.io/start/install-ce/server/kubernetes/baremetal
 
 
+
+## Nextcloud
+
+After deploying the image, it seems setting the permission via `fsGroup` or `runAsGroup` doesn't fix the issue where nextcloud requires the data folder to be `0770`. 
+
+Alternatively you can find the pvc on the host by searching `/var/lib/rancher/k3s/storage` for the config claim. Then edit the `config.php` to include the following line. In order to disable this requirement.
+```php
+  'check_data_directory_permissions' => false,
+```

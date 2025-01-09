@@ -1,0 +1,199 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nextcloud-html-claim
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  # storageClassName: nfs-client
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nextcloud-custom-apps-claim
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  # storageClassName: nfs-client
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nextcloud-config-claim
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  # storageClassName: nfs-client
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nextcloud-data-claim
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  # storageClassName: nfs-client
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nextcloud-themes-claim
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  # storageClassName: nfs-client
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+
+# ---
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: IngressRoute
+# metadata:
+#   name: nextcloud-ingress
+#   annotations: 
+#     kubernetes.io/ingress.class: traefik 
+# spec:
+#   entryPoints:
+#     - websecure
+#   routes:
+#     - match: Host(`nextcloud.example.com`)
+#       kind: Rule
+#       services:
+#         - name: nextcloud
+#           port: 80
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  type: LoadBalancer
+  selector:
+    app: nextcloud
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: network
+  labels:
+    io.portainer.kubernetes.application.stack: nextcloud
+    app.kubernetes.io/name: nextcloud
+spec:
+  selector:
+    matchLabels:
+      app: nextcloud
+  replicas: 1
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+        namespace: network
+    spec:
+      containers:
+      - name: nextcloud
+        image: nextcloud
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+        env:
+          - name: TZ
+            value: "America/Denver"
+        ports: 
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /var/www/html
+          name: nextcloud-html
+        - mountPath: /var/www/html/custom_apps
+          name: nextcloud-custom-apps
+        - mountPath: var/www/html/config
+          name: nextcloud-config
+        - mountPath: /var/www/html/data
+          name: nextcloud-data
+        - mountPath: /var/www/html/themes/
+          name: nextcloud-themes
+      volumes:
+      - name: nextcloud-html
+        persistentVolumeClaim:
+          claimName:  nextcloud-html-claim
+      - name: nextcloud-custom-apps
+        persistentVolumeClaim:
+          claimName:  nextcloud-custom-apps-claim
+      - name: nextcloud-config
+        persistentVolumeClaim:
+          claimName:  nextcloud-config-claim
+      - name: nextcloud-data
+        persistentVolumeClaim:
+          claimName:  nextcloud-data-claim
+      - name: nextcloud-themes
+        persistentVolumeClaim:
+          claimName:  nextcloud-themes-claim
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
