@@ -9,6 +9,15 @@ This applies to using k3s and a headless raspberry pi as nodes. It should transl
 console=serial0,115200 console=tty1 root=PARTUUID=28373ef5-02 rootfstype=ext4 fsck.repair=yes rootwait cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1
 ```
 
+## Generate a Wildcard Certificate
+
+Acquire a cloudflare api key with access to dns zone editing for the hostname being configured. Add the api key to a file with `dns_cloudflare_api_token = <toke>` and then run the following command to generate the cert.
+
+```sh
+sudo certbot certonly   --dns-cloudflare   --dns-cloudflare-credentials ~/cf-api.ini -d *.<hostname>
+```
+
+
 ## Install K3s
 
 - https://drunkcoding.net/posts/ks-01-install-k3s-on-pi-cluster/
@@ -21,9 +30,11 @@ console=serial0,115200 console=tty1 root=PARTUUID=28373ef5-02 rootfstype=ext4 fs
 
 ## Deploy Cloudflared Tunnel
 
-- https://developers.cloudflare.com/cloudflare-one/tutorials/many-cfd-one-tunnel/
+First create a cloudflared tunnel with a domain in the cloudflare online portal.
 
+Next grab the manifest from the following link, copy the token into the manifest and configure the route(s) in the online portal.
 
+- https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/deploy-tunnels/deployment-guides/kubernetes/#routing-with-cloudflare-tunnel
 
 
 ## Nextcloud
