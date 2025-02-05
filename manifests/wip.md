@@ -1,8 +1,10 @@
 # A WIP Outline of the setup process
 
-This applies to using k3s and a headless raspberry pi as nodes. It should translate to any hardware generically.
+This applies to using k3s and a headless raspberry pi as nodes. It should mostly translate to any hardware.
 
-## Prepare Pi
+The desired objectives of this document is to establish a k3s cluster
+
+# Prepare Pi
 
 ```sh
 # /boot/firmware/cmdline.txt
@@ -15,47 +17,27 @@ Setup static IPs for each node.
 sudo nmtui
 ```
 
-## Generate a Wildcard Certificate
+# Install K3s
 
-Acquire a cloudflare api key with access to dns zone editing for the hostname being configured. Then have certbot use said api key to verify the domain and generate keys.
-
-First install certbot. For additional info [here.](https://certbot-dns-cloudflare.readthedocs.io/en/stable/)
-
-```sh
-sudo apt install ...
-```
-
-Add the api key to a file with `dns_cloudflare_api_token = <token>` and then run the following command to generate the cert.
-
-```sh
-sudo certbot certonly   --dns-cloudflare   --dns-cloudflare-credentials ~/cf-api.ini -d *.<hostname>
-```
-
-sudo apt install python3-certbot-dns-cloudflare
-
-https://www.digitalocean.com/community/tutorials/how-to-create-let-s-encrypt-wildcard-certificates-with-certbot
-
-## Install K3s
-
-Server
+### Server
 
 ```
 curl -sfL https://get.k3s.io | K3S_TOKEN=`cat .k3s_secret` INSTALL_K3S_EXEC="server --disable=servicelb --disable=traefik --flannel-backend=host-gw --write-kubeconfig-mode=644 --tls-san=192.168.1.212 --bind-address=192.168.1.212 --advertise-address=192.168.1.212 --node-ip=192.168.1.212 --cluster-init" sh -s -
 ```
 
-Agent
+### Agents
 
 ```sh
  curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.212:6443 K3S_TOKEN="K107d423aa1b3833294e67e077a6a765120d63adc1ce0134f55080a57fd8ba72c34::server:43a2b08467224270b93f" sh -
 ```
 
-#### Resources
+### Resources
 
 - https://drunkcoding.net/posts/ks-01-install-k3s-on-pi-cluster/
 - (Alt) https://everythingdevops.dev/step-by-step-guide-creating-a-kubernetes-cluster-on-raspberry-pi-5-with-k3s/
 - (Alt) https://fernandosilva.me/3-node-k3s-cluster-with-etcd-and-metallb-4ddc7dcfb303
 
-## Deploy MetalLB
+# Deploy MetalLB
 
 Deploying the LB first requires setting up the namespace. Then we can deploy the metal lb instance and finally the ip pool that metallb can draw from.
 
@@ -66,11 +48,11 @@ ktl create -f manifests/network.yaml
 
 ```
 
-#### Resources
+### Resources
 
 - https://fernandosilva.me/3-node-k3s-cluster-with-etcd-and-metallb-4ddc7dcfb303
 
-## Setup NFS Storage
+# Setup NFS Storage
 
 Assuming the desired storage for NFS is mounted start by installing the NFS driver, kernel server and nfs core utilities.
 
@@ -134,15 +116,56 @@ spec:
 - https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/
 - https://nfs.sourceforge.net/nfs-howto/ar01s07.html
 
-## Deploy Cloudflared Tunnel
+# Deploy Cloudflared Tunnel
 
 First create a cloudflared tunnel with a domain in the cloudflare online portal.
 
-Next grab the manifest from the following link, copy the token into the manifest and configure the route(s) in the online portal.
+Next create a cloudflare api token with the `Edit DNS` permission capable of accessing the relevant domain resource. Then use the api token generated to create a kubernetes secret required for the cloudflared tunnel deployment to work successfully.
 
+```sh
+kubectl create secret generic tokens --from-literal=dns_cloudflare_api_token='<GENERATED_TOKEN>' -n network
+```
+
+Finally before creating the cloudflared deployment, create a config a config file with the tunnel id and the desired ingress points. The config file should be placed inside the configs
+
+```yaml
+tunnel: 6ff42ae2-765d-4adf-8112-31c55c1551ef
+
+ingress:
+  - hostname: gitlab.widgetcorp.tech
+    service: http://localhost:80
+  - hostname: gitlab-ssh.widgetcorp.tech
+    service: ssh://localhost:22
+  - service: http_status:404
+```
+
+### Resources
+
+- https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/configure-tunnels/tunnel-run-parameters/#config
 - https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/deploy-tunnels/deployment-guides/kubernetes/#routing-with-cloudflare-tunnel
+- https://developers.cloudflare.com/cloudflare-one/tutorials/many-cfd-one-tunnel/
 
-## Nextcloud
+## Generate Certificates
+
+Acquire a cloudflare api key with access to dns zone editing for the hostname being configured. Then have certbot use said api key to verify the domain and generate keys.
+
+First install certbot. For additional info [here.](https://certbot-dns-cloudflare.readthedocs.io/en/stable/)
+
+```sh
+sudo apt install ...
+```
+
+Add the api key to a file with `dns_cloudflare_api_token = <token>` and then run the following command to generate the cert.
+
+```sh
+sudo certbot certonly   --dns-cloudflare   --dns-cloudflare-credentials ~/cf-api.ini -d *.<hostname>
+```
+
+sudo apt install python3-certbot-dns-cloudflare
+
+https://www.digitalocean.com/community/tutorials/how-to-create-let-s-encrypt-wildcard-certificates-with-certbot
+
+# Nextcloud
 
 After deploying the image, it seems setting the permission via `fsGroup` or `runAsGroup` doesn't fix the issue where nextcloud requires the data folder to be `0770`.
 

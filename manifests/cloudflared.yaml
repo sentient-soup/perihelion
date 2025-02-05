@@ -26,9 +26,12 @@ spec:
             - --metrics
             - 0.0.0.0:2000
             - run
-          args:
-            - --token
-            - <token>
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: tokens
+                  key: TUNNEL_TOKEN
           image: cloudflare/cloudflared:latest
           name: cloudflared
           livenessProbe:

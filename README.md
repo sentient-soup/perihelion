@@ -4,26 +4,25 @@ Accumulation of manifests, scripts, and config files used to establish the aphel
 
 ## Features
 
-| Feature                              | (Proposed) Technology                | Completed |
-|--------------------------------------|--------------------------------------|-----------|
-| Replicable Setup                     | Bash (Maybe Helm)                    | ❌       |
-| Load Balancing                       | Kubernetes                           | ✔️       |
-| Container Management                 | Portainer                            | ✔️       |
-| Load Balancing & Routing             | Traefik & MetalLB                    | ✔️       |
-| DNS management                       | Pihole                               | ✔️       |
-| Smart Home/Device Integration        | Homeassistant                        | ✔️       |
-| File Serving                         | Nextcloud                            | ✔️       |
-| Network Tunneling                    | CloudFlared Tunnel                   | 🔜       |
-| Certificate Management               | Let's Encrypt/Certbot (CertManager)  | ❌       |
-| CI/CD Capabilities                   | ArgoCD/Github CI                     | ❌       |
-| Web Serving                          | NginX                                | ❌       |
-| Media Serving                        | Plex                                 | ❌       |
-| Game Servers                         | Custom scripts                       | ❌       |
-| Network Topology Mapper              | NetAlertX                            | ❌       |
-| Version Watchdog                     | Keel.sh                              | ❌       |
-| Metrics Monitoring                   | Portainer or Prometheus/Grafana      | ❌       |
-| Camera/Stream Ingestion              | Shinobi (?)                          | ❌       |
-
+| Feature                       | (Proposed) Technology               | Completed |
+| ----------------------------- | ----------------------------------- | --------- |
+| Replicable Setup              | Bash (Maybe Helm)                   | ❌        |
+| Load Balancing                | Kubernetes                          | ✔️        |
+| Container Management          | Portainer                           | ✔️        |
+| Load Balancing & Routing      | Traefik & MetalLB                   | ✔️        |
+| DNS management                | Pihole                              | ✔️        |
+| Smart Home/Device Integration | Homeassistant                       | ✔️        |
+| File Serving                  | Nextcloud                           | ✔️        |
+| Network Tunneling             | CloudFlared Tunnel                  | ✔️        |
+| Certificate Management        | Let's Encrypt/Certbot (CertManager) | ✔️        |
+| CI/CD Capabilities            | ArgoCD/Github CI                    | ❌        |
+| Web Serving                   | NginX                               | ❌        |
+| Media Serving                 | Plex/Jellyfin                       | ❌        |
+| Game Servers                  | Custom scripts                      | ❌        |
+| Network Topology Mapper       | NetAlertX                           | ❌        |
+| Version Watchdog              | Keel.sh                             | ❌        |
+| Metrics Monitoring            | Portainer or Prometheus/Grafana     | ❌        |
+| Camera/Stream Ingestion       | Shinobi (?)                         | ❌        |
 
 ## Future Goals
 
