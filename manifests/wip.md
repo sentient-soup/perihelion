@@ -91,23 +91,9 @@ NFS can be fairly finicky! [This guide](https://nfs.sourceforge.net/nfs-howto/ar
 
 ### NFS Provisioner
 
-In order to enable a storage class that can utilize the nfs we just setup, we can install an [nfs dynamic provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/). You can follow the readme in the repo, however be brief, we essentially need the manifest files in the `deploy` folder from the repo. Then edit the manifests to use the desired namespace, nfs connection info, and optional parameters defining creation/deletion behavior. Once we create the nfs provisioner we can use the new storage class when creating PVCs.
+~~In order to enable a storage class that can utilize the nfs we just setup, we can install an [nfs dynamic provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/). You can follow the readme in the repo, however be brief, we essentially need the manifest files in the `deploy` folder from the repo. Then edit the manifests to use the desired namespace, nfs connection info, and optional parameters defining creation/deletion behavior. Once we create the nfs provisioner we can use the new storage class when creating PVCs.~~
 
-```yaml
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: test-claim
-  annotations:
-    nfs.io/storage-path: "test-path" # not required, depending on whether this annotation was shown in the storage class description
-spec:
-  storageClassName: nfs-client
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Mi
-```
+This needs to be redone using [CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/deploy/example/README.md). The nfs dynamic provisioner library that was being used prior is no longer maintained and not recommended for use. CSI driver is now the reocommended nfs provisioner for kubernetes.
 
 ### Resources
 

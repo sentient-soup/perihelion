@@ -2,38 +2,20 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pihole-etc
+  name: pihole
   namespace: network
   annotations:
-    volume.alpha.kubernetes.io/storage-class: "generic"
-  labels:
-    io.portainer.kubernetes.application.stack: pihole
-    app.kubernetes.io/name: pihole
-    app.kubernetes.io/version: "2024.07.0"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pihole-dnsmasq
-  namespace: network
-  annotations:
-    volume.alpha.kubernetes.io/storage-class: "generic"
+    nfs.io/storage-path: "pihole"
   labels:
     io.portainer.kubernetes.application.stack: pihole
     app.kubernetes.io/name: pihole
 spec:
+  storageClassName: nfs-client
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
-      storage: 500Mi
+      storage: 2Gi
 
 ---
 kind: Service
@@ -47,18 +29,18 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-    name: pihole-admin
-  - port: 53
-    targetPort: 53
-    protocol: TCP
-    name: dns-tcp
-  - port: 53
-    targetPort: 53
-    protocol: UDP
-    name: dns-udp
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: pihole-admin
+    - port: 53
+      targetPort: 53
+      protocol: TCP
+      name: dns-tcp
+    - port: 53
+      targetPort: 53
+      protocol: UDP
+      name: dns-udp
   selector:
     app.kubernetes.io/name: pihole
 
@@ -73,7 +55,7 @@ metadata:
     app.kubernetes.io/name: pihole
     app.kubernetes.io/version: "2024.07.0"
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: pihole
@@ -83,12 +65,9 @@ spec:
         app.kubernetes.io/name: pihole
     spec:
       volumes:
-        - name: data-etc
+        - name: pihole-data
           persistentVolumeClaim:
-            claimName: pihole-etc
-        - name: data-dnsmasq
-          persistentVolumeClaim:
-            claimName: pihole-dnsmasq
+            claimName: pihole
       containers:
         - name: pihole
           image: pihole/pihole:2024.07.0
@@ -97,12 +76,17 @@ spec:
             - name: TZ
               value: "America/Denver"
             - name: WEBPASSWORD
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: PIHOLE_PASSWORD
           volumeMounts:
-            - name: data-etc
+            - name: pihole-data
               mountPath: "/etc/pihole"
-            - name: data-dnsmasq
+              subPath: "pihole"
+            - name: pihole-data
               mountPath: "/etc/dnsmasq.d"
+              subPath: "dnsmasq.d"
           ports:
             - name: pihole-admin
               containerPort: 80
@@ -113,13 +97,13 @@ spec:
             - name: dns-udp
               containerPort: 53
               protocol: UDP
-          # livenessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 9443
-          #     scheme: HTTPS
-          # readinessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: 9443
-          #     scheme: HTTPS
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9443
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9443
+              scheme: HTTPS
