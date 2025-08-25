@@ -1,38 +1,61 @@
 ---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+  name: phis-standard-pihole
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-csi
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: phis1#standard#pihole
+    volumeAttributes:
+      server: 192.168.1.212
+      share: /media/storage/standard/pihole
+
+---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pihole
-  namespace: network
-  annotations:
-    nfs.io/storage-path: "pihole"
-  labels:
-    io.portainer.kubernetes.application.stack: pihole
-    app.kubernetes.io/name: pihole
+  name: phis-standard-pihole
+  namespace: default
 spec:
-  storageClassName: nfs-client
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
-      storage: 2Gi
+      storage: 1Gi
+  volumeName: phis-standard-pihole
+  storageClassName: nfs-csi
 
 ---
 kind: Service
 apiVersion: v1
 metadata:
   name: pihole
-  namespace: network
+  namespace: default
   labels:
-    io.portainer.kubernetes.application.stack: pihole
     app.kubernetes.io/name: pihole
 spec:
   type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
   ports:
     - port: 80
       targetPort: 80
       protocol: TCP
-      name: pihole-admin
+      name: pihole-http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: pihole-https
     - port: 53
       targetPort: 53
       protocol: TCP
@@ -49,13 +72,12 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: pihole
-  namespace: network
+  namespace: default
   labels:
-    io.portainer.kubernetes.application.stack: pihole
     app.kubernetes.io/name: pihole
-    app.kubernetes.io/version: "2024.07.0"
+    app.kubernetes.io/version: '2025.08.0'
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: pihole
@@ -67,29 +89,30 @@ spec:
       volumes:
         - name: pihole-data
           persistentVolumeClaim:
-            claimName: pihole
+            claimName: phis-standard-pihole
       containers:
         - name: pihole
-          image: pihole/pihole:2024.07.0
+          image: pihole/pihole:2025.08.0
           imagePullPolicy: Always
           env:
             - name: TZ
-              value: "America/Denver"
-            - name: WEBPASSWORD
+              value: 'America/Denver'
+            - name: FTLCONF_webserver_api_password
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: PIHOLE_PASSWORD
+            - name: FTLCONF_dns_upstreams
+              value: '1.1.1.1;9.9.9.9'
           volumeMounts:
             - name: pihole-data
-              mountPath: "/etc/pihole"
-              subPath: "pihole"
-            - name: pihole-data
-              mountPath: "/etc/dnsmasq.d"
-              subPath: "dnsmasq.d"
+              mountPath: '/etc/pihole'
           ports:
-            - name: pihole-admin
+            - name: pihole-http
               containerPort: 80
+              protocol: TCP
+            - name: pihole-https
+              containerPort: 443
               protocol: TCP
             - name: dns-tcp
               containerPort: 53
@@ -97,13 +120,7 @@ spec:
             - name: dns-udp
               containerPort: 53
               protocol: UDP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 9443
-              scheme: HTTPS
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 9443
-              scheme: HTTPS
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN

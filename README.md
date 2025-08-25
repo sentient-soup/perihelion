@@ -8,7 +8,7 @@ Accumulation of manifests, scripts, and config files used to establish the aphel
 | ----------------------------- | ----------------------------------- | --------- |
 | Replicable Setup              | Bash (Maybe Helm)                   | ❌        |
 | Load Balancing                | Kubernetes                          | ✔️        |
-| Container Management          | Portainer                           | ✔️        |
+| Container Management          | ~~Portainer~~ Rancher               | ✔️        |
 | Load Balancing & Routing      | Traefik & MetalLB                   | ✔️        |
 | DNS management                | Pihole                              | ✔️        |
 | Smart Home/Device Integration | Homeassistant                       | ✔️        |
@@ -16,8 +16,7 @@ Accumulation of manifests, scripts, and config files used to establish the aphel
 | Network Tunneling             | CloudFlared Tunnel                  | ✔️        |
 | Certificate Management        | Let's Encrypt/Certbot (CertManager) | ✔️        |
 | CI/CD Capabilities            | ArgoCD/Github CI                    | ❌        |
-| Web Serving                   | NginX                               | ❌        |
-| Media Serving                 | Plex/Jellyfin                       | ❌        |
+| Media Serving                 | Jellyfin                            | ✔️        |
 | Game Servers                  | Custom scripts                      | ❌        |
 | Network Topology Mapper       | NetAlertX                           | ❌        |
 | Version Watchdog              | Keel.sh                             | ❌        |

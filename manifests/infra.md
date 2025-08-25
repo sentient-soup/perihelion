@@ -1,4 +1,7 @@
-# A WIP Outline of the setup process
+> [!CAUTION]
+> This is a WIP and likely to change over time. At the time of writing, this is used more as a living document and not considered to be a guide in any way shape or form. Use at your own risk.
+
+# Setting Core Infra
 
 This applies to using k3s and a headless raspberry pi as nodes. It should mostly translate to any hardware.
 
@@ -89,18 +92,55 @@ Then create a file from one node and verify you can see said file from another. 
 
 NFS can be fairly finicky! [This guide](https://nfs.sourceforge.net/nfs-howto/ar01s07.html) is a handy troubleshooting guide that should help you with any issues you may run into.
 
-### NFS Provisioner
+### CSI Driver NFS
 
-~~In order to enable a storage class that can utilize the nfs we just setup, we can install an [nfs dynamic provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/). You can follow the readme in the repo, however be brief, we essentially need the manifest files in the `deploy` folder from the repo. Then edit the manifests to use the desired namespace, nfs connection info, and optional parameters defining creation/deletion behavior. Once we create the nfs provisioner we can use the new storage class when creating PVCs.~~
+Using helm simply follow the steps outlined at the [CSI driver for nfs github](https://github.com/kubernetes-csi/csi-driver-nfs/tree/master/charts).
 
-This needs to be redone using [CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/deploy/example/README.md). The nfs dynamic provisioner library that was being used prior is no longer maintained and not recommended for use. CSI driver is now the reocommended nfs provisioner for kubernetes.
+For now to keep the base deployment simple we'll avoid setting up a storage class (I've encountered a lot of problems doing as such due to my poor understanding of dynamic provisioning). In order to add a static PV/PVC for a specific use case you can follow the steps outlined in the [repo examples](https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/deploy/example/README.md). But the static templates look like the following:
+
+```yaml
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+  name: <volume name>
+spec:
+  capacity:
+    storage: <Desired size, IE 10Gi, 500Mi>
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-csi
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: <server>#<subdir>#<share>
+    volumeAttributes:
+      server: <server host>
+      share: <mnt path>
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: <volume claim name>
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: <volume name>
+  storageClassName: nfs-csi
+```
 
 ### Resources
 
 - https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/docs/install-csi-driver-v4.10.0.md
-- https://medium.com/@shatoddruh/kubernetes-how-to-install-the-nfs-server-and-nfs-dynamic-provisioning-on-azure-virtual-machines-e85f918c7f4b
-- https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/
-- https://nfs.sourceforge.net/nfs-howto/ar01s07.html
 
 # Deploy Cloudflared Tunnel
 
@@ -111,6 +151,9 @@ Next create a cloudflare api token with the `Edit DNS` permission capable of acc
 ```sh
 kubectl create secret generic tokens --from-literal=dns_cloudflare_api_token='<GENERATED_TOKEN>' -n network
 ```
+
+> [!WARNING]
+> I have not tested the following client side configuration of the ingress points. This needs work and as of writing is being done via the cloudflared web UI.
 
 Finally before creating the cloudflared deployment, create a config a config file with the tunnel id and the desired ingress points. The config file should be placed inside the configs
 
@@ -131,7 +174,7 @@ ingress:
 - https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/deploy-tunnels/deployment-guides/kubernetes/#routing-with-cloudflare-tunnel
 - https://developers.cloudflare.com/cloudflare-one/tutorials/many-cfd-one-tunnel/
 
-## Generate Certificates
+# Generate Certificates
 
 Acquire a cloudflare api key with access to dns zone editing for the hostname being configured. Then have certbot use said api key to verify the domain and generate keys.
 
@@ -150,13 +193,3 @@ sudo certbot certonly   --dns-cloudflare   --dns-cloudflare-credentials ~/cf-api
 sudo apt install python3-certbot-dns-cloudflare
 
 https://www.digitalocean.com/community/tutorials/how-to-create-let-s-encrypt-wildcard-certificates-with-certbot
-
-# Nextcloud
-
-After deploying the image, it seems setting the permission via `fsGroup` or `runAsGroup` doesn't fix the issue where nextcloud requires the data folder to be `0770`.
-
-Alternatively you can find the pvc on the host by searching `/var/lib/rancher/k3s/storage` for the config claim. Then edit the `config.php` to include the following line. In order to disable this requirement.
-
-```php
-  'check_data_directory_permissions' => false,
-```
