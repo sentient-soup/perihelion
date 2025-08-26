@@ -1,0 +1,53 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: apseline
+  namespace: default
+  labels:
+    name: apseline
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+  selector:
+    name: apseline
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: apseline
+  namespace: default
+  labels:
+    name: apseline
+    version: '0.1.0'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: apseline
+  template:
+    metadata:
+      labels:
+        name: apseline
+    spec:
+      containers:
+        - name: apseline
+          image: ghcr.io/sentient-soup/apseline:master
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP

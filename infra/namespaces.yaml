@@ -1,0 +1,19 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: argocd
+
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: cattle-system
+
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: metallb-system
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
