@@ -1,12 +1,13 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: cloudflared
   name: cloudflared-deployment
-  namespace: network
+  namespace: default
 spec:
-  replicas: 2
+  replicas: 
   selector:
     matchLabels:
       pod: cloudflared
