@@ -1,22 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: apseline
+  name: root
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.io
 spec:
   project: default
   source:
     repoURL: https://github.com/sentient-soup/perihelion
     targetRevision: HEAD
-    path: manifests/services/apseline
+    path: k8s/apps
+    directory:
+      recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: apps
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true

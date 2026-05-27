@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/sentient-soup/perihelion
     targetRevision: HEAD
-    path: manifests/services/nginx
+    path: k8s/manifests/services/nginx
   destination:
     server: https://kubernetes.default.svc
     namespace: networking

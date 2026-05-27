@@ -10,3 +10,4 @@
 pub-cert.pem
 
 
+.claude/settings.local.json
