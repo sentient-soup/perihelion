@@ -1,15 +1,14 @@
----
-kind: PersistentVolume
 apiVersion: v1
+kind: PersistentVolume
 metadata:
+  name: phis-standard-psql
   annotations:
     pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
-  name: phis-standard-psql
 spec:
   capacity:
-    storage: 20Gi
+    storage: 10Gi
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: nfs-csi
   mountOptions:
@@ -22,46 +21,47 @@ spec:
       share: /media/storage/standard/psql
 
 ---
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
   name: phis-standard-psql
-  namespace: default
+  namespace: apps
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
+      storage: 10Gi
   volumeName: phis-standard-psql
   storageClassName: nfs-csi
 
 ---
-kind: Service
 apiVersion: v1
+kind: Service
 metadata:
   name: postgres
-  namespace: default
+  namespace: apps
   labels:
     app.kubernetes.io/name: postgres
 spec:
-  type: LoadBalancer
-  allocateLoadBalancerNodePorts: false
+  type: ClusterIP
   ports:
     - port: 5432
       targetPort: 5432
       protocol: TCP
-      name: psql-port
+      name: postgres
   selector:
     app.kubernetes.io/name: postgres
 
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: postgres
+  namespace: apps
   labels:
     app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: "17"
 spec:
   replicas: 1
   selector:
@@ -78,30 +78,28 @@ spec:
             claimName: phis-standard-psql
       containers:
         - name: postgres
-          image: 'postgres:17'
-          imagePullPolicy: IfNotPresent
+          image: postgres:17
+          imagePullPolicy: Always
           env:
-            - name: TZ
-              value: 'America/Denver'
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: apseline-secrets
                   key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: apseline-secrets
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: apseline-secrets
                   key: POSTGRES_PASSWORD
-          volumeMounts:
-            - mountPath: /var/lib/postgresql/data
-              name: postgres-data
           ports:
-            - name: psql-port
+            - name: postgres
               containerPort: 5432
               protocol: TCP
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data

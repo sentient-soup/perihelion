@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeassist
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: homeassist
+    app.kubernetes.io/version: "2025.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homeassist
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: homeassist
+    spec:
+      hostNetwork: true
+      volumes:
+        - name: homeassist-data
+          persistentVolumeClaim:
+            claimName: homeassist-data
+      containers:
+        - name: homeassist
+          image: homeassistant/home-assistant:2025.1
+          env:
+            - name: TZ
+              value: "America/Denver"
+          ports:
+            - containerPort: 8123
+          volumeMounts:
+            - mountPath: /config
+              name: homeassist-data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

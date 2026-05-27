@@ -1,1 +1,12 @@
-secrets.yaml
+# Plain Kubernetes secrets - never commit these
+# Use kubeseal to produce sealed-secret.yaml files instead
+**/*-secret-plain.yaml
+**/secret-plain.yaml
+
+# temp staging area
+/tmp/
+
+# Local kubeseal public cert (fetch fresh with: kubeseal --fetch-cert > pub-cert.pem)
+pub-cert.pem
+
+
