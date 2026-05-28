@@ -11,3 +11,8 @@ pub-cert.pem
 
 
 .claude/settings.local.json
+
+# Docker: SOPS-decrypted secrets (generated at deploy time, never commit)
+docker/**/.secrets.env
+# Docker: unencrypted staging file before SOPS encryption (use secrets.enc.env instead)
+docker/**/secrets.env
