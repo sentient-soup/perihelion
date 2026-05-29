@@ -15,7 +15,7 @@ spec:
       values: |
         service:
           spec:
-            loadBalancerIP: 192.168.1.227
+            loadBalancerIP: 192.168.1.226
         ingressClass:
           enabled: true
           isDefaultClass: true

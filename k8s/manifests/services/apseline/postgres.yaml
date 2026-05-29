@@ -10,7 +10,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: ""
   local:
-    path: /media/storage/k8s-data/apseline/postgres
+    path: /srv/apseline/postgres
   nodeAffinity:
     required:
       nodeSelectorTerms:
