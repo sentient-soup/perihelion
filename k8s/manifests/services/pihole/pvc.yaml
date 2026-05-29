@@ -1,24 +1,24 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: phis-standard-pihole
-  annotations:
-    pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+  name: pihole-pv
 spec:
   capacity:
     storage: 1Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs-csi
-  mountOptions:
-    - nfsvers=4.1
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: phis1#standard#pihole
-    volumeAttributes:
-      server: 192.168.1.212
-      share: /media/storage/standard/pihole
+  storageClassName: ""
+  local:
+    path: /media/storage/k8s-data/pihole
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - phis1
 
 ---
 apiVersion: v1
@@ -32,5 +32,5 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  volumeName: phis-standard-pihole
-  storageClassName: nfs-csi
+  storageClassName: ""
+  volumeName: pihole-pv

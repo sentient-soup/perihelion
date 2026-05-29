@@ -1,24 +1,24 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: phis-standard-psql
-  annotations:
-    pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+  name: apseline-psql-pv
 spec:
   capacity:
     storage: 10Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs-csi
-  mountOptions:
-    - nfsvers=4.1
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: phis1#standard#psql
-    volumeAttributes:
-      server: 192.168.1.212
-      share: /media/storage/standard/psql
+  storageClassName: ""
+  local:
+    path: /media/storage/k8s-data/apseline/postgres
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - phis1
 
 ---
 apiVersion: v1
@@ -32,8 +32,8 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  volumeName: phis-standard-psql
-  storageClassName: nfs-csi
+  storageClassName: ""
+  volumeName: apseline-psql-pv
 
 ---
 apiVersion: v1
