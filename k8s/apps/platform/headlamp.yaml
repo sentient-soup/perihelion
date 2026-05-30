@@ -13,7 +13,8 @@ spec:
       values: |
         service:
           type: LoadBalancer
-          loadBalancerIP: 192.168.1.228
+          annotations:
+            metallb.universe.tf/loadBalancerIPs: 192.168.1.228
   destination:
     server: https://kubernetes.default.svc
     namespace: platform
