@@ -22,6 +22,12 @@ spec:
         api:
           dashboard: true
           insecure: false
+        # Dashboard is exposed via our own authenticated IngressRoute
+        # (k8s/manifests/platform/traefik/dashboard.yaml), not the chart's
+        # default unauthenticated one.
+        ingressRoute:
+          dashboard:
+            enabled: false
         providers:
           kubernetesIngress:
             enabled: true

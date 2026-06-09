@@ -72,11 +72,18 @@ For apps in `k8s/apps/` that use Helm sources, `targetRevision` is the chart sem
 
 nginx (`k8s/manifests/services/nginx/`) is a raw nginx deployment (not the nginx-ingress controller) being phased out. Traefik (`k8s/apps/platform/traefik.yaml`) is the target ingress controller. New routing should be built as Traefik `IngressRoute` CRDs, not nginx config. cloudflared has been removed — there is no public tunnel; access is LAN-only via MetalLB + split-horizon DNS.
 
+**Routing pattern (copy these for new services):**
+- A default `TLSStore` (`k8s/manifests/platform/traefik/tlsstore.yaml`) points at the `wildcard-perihelion-tls` secret, so any `IngressRoute` with `tls: {}` gets the wildcard cert — no per-service cert secrets needed.
+- Put each `IngressRoute` **in the same namespace as the Service it targets** (Traefik resolves services within the route's namespace; cross-namespace service refs are disabled). Wire that manifests dir into a `*-config` ArgoCD app (see `headlamp-config.yaml`).
+- Use `entryPoints: [websecure]` (443).
+- Two reference examples: `headlamp/ingressroute.yaml` (plain app that brings its own auth) and `traefik/dashboard.yaml` (internal `api@internal` service protected by the `dashboard-auth` `basicAuth` Middleware).
+- Each new hostname needs a Pihole local-DNS record → `192.168.1.226` (Traefik's LB IP).
+
 ## Secrets pattern
 
 All secrets in `k8s/manifests/` are `SealedSecret` resources (encrypted, safe to commit). They decrypt to regular `Secret` objects via the Sealed Secrets controller running in the `infra` namespace. Never commit plain `Secret` resources.
 
-**Generating/rotating:** use `scripts/generate-secret.sh <cloudflare|pihole|all>`. It reads plaintext values from a git-ignored `.env` (template: `.env.example`) and seals **offline** against the committed `pub-cert.pem` — no cluster or kubeconfig required. `kubectl` must be on `PATH` but only renders the secret locally (`--dry-run=client`); the controller's public cert (`pub-cert.pem`) is safe to commit and is what enables offline sealing. Refresh it only if the controller's keypair rotates: `kubeseal --controller-namespace infra --fetch-cert > pub-cert.pem`. To add a new secret, copy a `gen_*` function in the script.
+**Generating/rotating:** use `scripts/generate-secret.sh <cloudflare|pihole|traefik-dashboard|all>`. It reads plaintext values from a git-ignored `.env` (template: `.env.example`) and seals **offline** against the committed `pub-cert.pem` — no cluster or kubeconfig required. `kubectl` must be on `PATH` but only renders the secret locally (`--dry-run=client`); the controller's public cert (`pub-cert.pem`) is safe to commit and is what enables offline sealing. Refresh it only if the controller's keypair rotates: `kubeseal --controller-namespace infra --fetch-cert > pub-cert.pem`. To add a new secret, copy a `gen_*` function in the script.
 
 **Strict-scope gotcha:** a SealedSecret's ciphertext is cryptographically bound to the exact `namespace` + `name` it was sealed under. You cannot move or rename one by editing the YAML — the controller will refuse to decrypt; you must re-seal. In particular, a `ClusterIssuer` reads its credential from the `cert-manager` namespace, so the Cloudflare token must be sealed for `cert-manager` (secret `cloudflare-api-token`, key `api-token`), not `default`.
 

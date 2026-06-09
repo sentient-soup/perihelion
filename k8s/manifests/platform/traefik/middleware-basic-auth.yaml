@@ -1,0 +1,11 @@
+# Basic-auth gate for the Traefik dashboard (which has no auth of its own).
+# Credentials live in the `traefik-dashboard-auth` secret (htpasswd format under
+# key `users`), produced by scripts/generate-secret.sh traefik-dashboard.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: dashboard-auth
+  namespace: traefik
+spec:
+  basicAuth:
+    secret: traefik-dashboard-auth

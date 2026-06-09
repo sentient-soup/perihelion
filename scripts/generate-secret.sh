@@ -3,9 +3,10 @@
 # Regenerate SealedSecret manifests from values in .env.
 #
 # Usage:
-#   ./scripts/generate-secret.sh cloudflare   # cert-manager Cloudflare API token
-#   ./scripts/generate-secret.sh pihole       # Pihole admin password
-#   ./scripts/generate-secret.sh all          # regenerate both
+#   ./scripts/generate-secret.sh cloudflare         # cert-manager Cloudflare API token
+#   ./scripts/generate-secret.sh pihole             # Pihole admin password
+#   ./scripts/generate-secret.sh traefik-dashboard  # Traefik dashboard basic-auth
+#   ./scripts/generate-secret.sh all                # regenerate all
 #
 # Secret values are read from the repo-root .env (git-ignored; see .env.example).
 # Requires kubectl + kubeseal on PATH and a reachable cluster — kubeseal fetches
@@ -33,9 +34,10 @@ usage() {
 Usage: ./scripts/generate-secret.sh <target>
 
 Targets:
-  cloudflare   Cloudflare API token  -> k8s/manifests/infra/cert-manager/sealed-secret.yaml
-  pihole       Pihole admin password -> k8s/manifests/services/pihole/sealed-secret.yaml
-  all          regenerate both
+  cloudflare         Cloudflare API token   -> k8s/manifests/infra/cert-manager/sealed-secret.yaml
+  pihole             Pihole admin password  -> k8s/manifests/services/pihole/sealed-secret.yaml
+  traefik-dashboard  Dashboard basic-auth   -> k8s/manifests/platform/traefik/dashboard-auth-sealed-secret.yaml
+  all                regenerate all
 
 Values are read from .env at the repo root (see .env.example).
 EOF
@@ -83,12 +85,27 @@ gen_pihole() {
     k8s/manifests/services/pihole/sealed-secret.yaml
 }
 
+gen_traefik_dashboard() {
+  require TRAEFIK_DASHBOARD_USER
+  require TRAEFIK_DASHBOARD_PASSWORD
+  # Traefik basicAuth expects htpasswd-format lines under key `users`.
+  local htpasswd
+  if command -v htpasswd >/dev/null 2>&1; then
+    htpasswd="$(htpasswd -nbB "$TRAEFIK_DASHBOARD_USER" "$TRAEFIK_DASHBOARD_PASSWORD")"
+  else
+    htpasswd="$TRAEFIK_DASHBOARD_USER:$(openssl passwd -apr1 "$TRAEFIK_DASHBOARD_PASSWORD")"
+  fi
+  echo "traefik-dashboard:"
+  reseal traefik-dashboard-auth traefik users "$htpasswd" \
+    k8s/manifests/platform/traefik/dashboard-auth-sealed-secret.yaml
+}
+
 # --- entry point ---------------------------------------------------------
 
 [[ $# -eq 1 ]] || { usage; exit 1; }
 case "$1" in
   -h|--help) usage; exit 0 ;;
-  cloudflare|pihole|all) target=$1 ;;
+  cloudflare|pihole|traefik-dashboard|all) target=$1 ;;
   *) usage; exit 1 ;;
 esac
 
@@ -103,7 +120,8 @@ source "$ENV_FILE"
 set +a
 
 case "$target" in
-  cloudflare) gen_cloudflare ;;
-  pihole)     gen_pihole ;;
-  all)        gen_cloudflare; gen_pihole ;;
+  cloudflare)        gen_cloudflare ;;
+  pihole)            gen_pihole ;;
+  traefik-dashboard) gen_traefik_dashboard ;;
+  all)               gen_cloudflare; gen_pihole; gen_traefik_dashboard ;;
 esac

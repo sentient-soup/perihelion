@@ -1,0 +1,11 @@
+# Default TLS store: any IngressRoute with `tls: {}` (and no explicit secret)
+# serves this wildcard cert, in any namespace. This is why routes below don't
+# each need a copy of the cert secret.
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: traefik
+spec:
+  defaultCertificate:
+    secretName: wildcard-perihelion-tls

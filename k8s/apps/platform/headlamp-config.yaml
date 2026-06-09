@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: headlamp-config
+  namespace: argocd
+  annotations:
+    # After traefik chart (wave 1) so the IngressRoute CRD exists.
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sentient-soup/perihelion
+    targetRevision: HEAD
+    path: k8s/manifests/platform/headlamp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
