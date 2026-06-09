@@ -1,22 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cloudflared
+  name: traefik-config
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    # Runs after the traefik chart (wave 1) and the ClusterIssuer (wave 0).
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   source:
     repoURL: https://github.com/sentient-soup/perihelion
     targetRevision: HEAD
-    path: k8s/manifests/services/cloudflared
+    path: k8s/manifests/platform/traefik
   destination:
     server: https://kubernetes.default.svc
-    namespace: networking
+    namespace: traefik
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true

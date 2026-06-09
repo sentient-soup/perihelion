@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-perihelion
+  namespace: traefik
+spec:
+  secretName: wildcard-perihelion-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  commonName: "*.perihelion.live"
+  dnsNames:
+    - "perihelion.live"
+    - "*.perihelion.live"

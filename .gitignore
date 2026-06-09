@@ -6,8 +6,9 @@
 # temp staging area
 /tmp/
 
-# Local kubeseal public cert (fetch fresh with: kubeseal --fetch-cert > pub-cert.pem)
-pub-cert.pem
+# Local secret values consumed by scripts/generate-secret.sh — never commit
+.env
+.env.local
 
 
 .claude/settings.local.json
