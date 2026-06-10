@@ -15,6 +15,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: platform
+  # The token controller populates headlamp-admin-token's .data at runtime;
+  # ignore it so ArgoCD doesn't perpetually report the Secret OutOfSync.
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: headlamp-admin-token
+      namespace: platform
+      jsonPointers:
+        - /data
   syncPolicy:
     automated:
       prune: true
