@@ -113,10 +113,12 @@ command -v kubectl  >/dev/null 2>&1 || die "kubectl not found on PATH"
 command -v kubeseal >/dev/null 2>&1 || die "kubeseal not found on PATH"
 [[ -f "$ENV_FILE" ]] || die ".env not found at $ENV_FILE (copy .env.example to .env)"
 
-# Load .env: export every assignment, then stop exporting.
+# Load .env: export every assignment, then stop exporting. Strip carriage
+# returns so a Windows/CRLF-edited .env doesn't bake a trailing \r into values
+# (which silently corrupts secrets — e.g. an htpasswd user "admin\r").
 set -a
 # shellcheck disable=SC1090
-source "$ENV_FILE"
+source <(tr -d '\r' < "$ENV_FILE")
 set +a
 
 case "$target" in
