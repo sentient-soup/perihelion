@@ -1,0 +1,4 @@
+# Shell scripts execute on the Linux docker host — CRLF breaks the shebang
+*.sh text eol=lf
+# env files are parsed by compose and sourced by bash on Linux (CRLF leaves \r in values)
+*.env text eol=lf

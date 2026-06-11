@@ -1,0 +1,35 @@
+# phis4 root compose — assembles service groups via include:. The env_file
+# list on each entry controls variable interpolation for that group.
+# Deploy and secrets workflow: README.md
+
+name: phis4
+
+include:
+  # Media (jellyfin, jellysignal when enabled)
+  # When uncommenting jellysignal, add services/media/.secrets.env to this list.
+  - path: services/media/compose.yaml
+    env_file: .env
+
+  # Ingest pipeline (*arr stack, gluetun, qbittorrent)
+  - path: services/ingest/compose.yaml
+    env_file:
+      - .env
+      - services/ingest/.secrets.env
+
+  # Photos (immich)
+  - path: services/photos/compose.yaml
+    env_file:
+      - .env
+      - services/photos/.secrets.env
+
+  # Files (nextcloud AIO)
+  - path: services/files/compose.yaml
+    env_file: .env
+
+  # Books (audiobookshelf)
+  - path: services/books/compose.yaml
+    env_file: .env
+
+  # Monitoring (victoriametrics, node_exporter, cadvisor)
+  - path: services/monitoring/compose.yaml
+    env_file: .env

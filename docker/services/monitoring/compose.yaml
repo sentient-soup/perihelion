@@ -1,0 +1,52 @@
+# Monitoring — VictoriaMetrics + node_exporter + cAdvisor. Docs: ../../README.md
+
+services:
+  # VICTORIAMETRICS — metrics storage & scraper. scrape.yml is hand-managed
+  # on the host (dir created by bootstrap/setup.sh).
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    container_name: victoriametrics
+    ports:
+      - "8428:8428"
+    volumes:
+      - vmdata:/storage
+      - ${CONFIG_DIR}/metrics/scrape.yml:/etc/vm/scrape.yml:ro
+    command:
+      - "-storageDataPath=/storage"
+      - "-retentionPeriod=30d"
+      - "-promscrape.config=/etc/vm/scrape.yml"
+      - "-promscrape.config.strictParse=false"
+    restart: unless-stopped
+
+  # NODE EXPORTER — host metrics.
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: node_exporter
+    pid: host
+    network_mode: host
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    restart: unless-stopped
+
+  # CADVISOR — container metrics.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+
+volumes:
+  vmdata:

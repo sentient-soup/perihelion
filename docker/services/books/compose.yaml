@@ -1,0 +1,17 @@
+# Books — Audiobookshelf (audiobooks + podcasts). Docs: ../../README.md
+
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:2.35.1
+    container_name: audiobookshelf
+    user: ${PUID}:${PGID}
+    restart: unless-stopped
+    ports:
+      - 13378:80
+    volumes:
+      - ${DATA_DIR}/books:/audiobooks
+      - ${DATA_DIR}/podcasts:/podcasts
+      - ${CONFIG_DIR}/audiobookshelf/config:/config
+      - ${CONFIG_DIR}/audiobookshelf/metadata:/metadata
+    environment:
+      - TZ=${TZ}

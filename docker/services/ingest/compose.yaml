@@ -1,0 +1,217 @@
+# Media ingest pipeline — *arr stack + qBittorrent routed through gluetun VPN.
+# All containers mount ${DATA_DIR} as /data (hardlink-friendly single root).
+# Layout, ports, and first-run config order: ../../README.md
+
+services:
+  # GLUETUN — VPN gateway (ProtonVPN WireGuard). qBittorrent and seedboxapi
+  # share its network stack. Built-in image healthcheck gates dependents.
+  gluetun:
+    # Digest pin: gluetun's `latest` tracks master, and this build (pulled
+    # 2026-06) is newer than the newest release tag (v3.41.1). At next
+    # maintenance, switch to a release tag — note v3.40+ requires an auth
+    # config for control-server routes (affects sync-qbit-port.sh).
+    image: qmcgaw/gluetun:latest@sha256:5665416a97ad2823dda6986a581b8913cc3af1b196ac768f5130abad4b0d4f62
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${QBIT_WEBUI_PORT}:8080"
+      # Control server, loopback only — sync-qbit-port.sh queries it from host cron.
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ${CONFIG_DIR}/gluetun:/gluetun
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${PROTON_WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES}
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
+      - PORT_FORWARD_ONLY=on
+      - FIREWALL_INPUT_PORTS=8080,8000
+      - FIREWALL_OUTBOUND_SUBNETS=${LOCAL_SUBNET}
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+    restart: unless-stopped
+
+  # QBITTORRENT — torrent client. Long stop grace period lets active
+  # torrents announce/flush cleanly.
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:5.2.1
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    stop_grace_period: 30m
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${CONFIG_DIR}/qbittorrent:/config
+      - ${DATA_DIR}/torrents:/data/torrents
+    restart: unless-stopped
+
+  # PROWLARR — indexer manager; syncs indexers to all *arr apps.
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.3.5.5327-ls148
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/prowlarr:/config
+    ports:
+      - "${PROWLARR_PORT}:9696"
+    restart: unless-stopped
+
+  # FLARESOLVERR — Cloudflare bypass proxy for Prowlarr indexers.
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.0
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ}
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
+  # RADARR — movie manager.
+  radarr:
+    image: lscr.io/linuxserver/radarr:6.1.1.10360-ls304
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/radarr:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - "${RADARR_PORT}:7878"
+    restart: unless-stopped
+
+  # SONARR — TV show manager.
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.17.2952-ls312
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/sonarr:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - "${SONARR_PORT}:8989"
+    restart: unless-stopped
+
+  # LIDARR — music manager.
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls30
+    container_name: lidarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/lidarr:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - "${LIDARR_PORT}:8686"
+    restart: unless-stopped
+
+  # BOOKSHELF — book/audiobook manager (Readarr successor, Hardcover metadata).
+  bookshelf:
+    # `hardcover` is a rolling tag; digest pins build 24f2b995-ls28 (2026-01-31).
+    image: ghcr.io/pennydreadful/bookshelf:hardcover@sha256:388eecc94362580eae31ee0a454be6af516f8a311f8432a521c202fb475f4359
+    container_name: bookshelf
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/bookshelf:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - "${BOOKSHELF_PORT}:8787"
+    restart: unless-stopped
+
+  # SEEDBOXAPI — MAM seedbox IP sync; runs inside gluetun so MAM sees the VPN IP.
+  seedboxapi:
+    # Upstream publishes no version tags; digest pins the 2026-06 pull.
+    image: myanonamouse/seedboxapi:latest@sha256:4712ede49e8c17ca1aee4cf61a145e249ddbb9498390b469c64b0b3086628259
+    user: ${PUID}:${PGID}
+    container_name: seedboxapi
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      - mam_id=${MAM_SESSION_ID}
+      - interval=5
+    volumes:
+      - ${CONFIG_DIR}/seedboxapi:/config
+    restart: unless-stopped
+
+  # JELLYSEERR — request management UI for Jellyfin/Radarr/Sonarr.
+  jellyseerr:
+    image: fallenbagel/jellyseerr:2.7.3
+    container_name: jellyseerr
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/jellyseerr:/app/config
+    ports:
+      - "${JELLYSEERR_PORT}:5055"
+    restart: unless-stopped
+
+  # READARR — optional audiobook manager (see README: Optional services).
+  # readarr:
+  #   image: lscr.io/linuxserver/readarr:amd64-nightly-0.4.19.2808-ls399
+  #   container_name: readarr
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR}/readarr:/config
+  #     - ${DATA_DIR}:/data
+  #   ports:
+  #     - "${READARR_PORT}:8787"
+  #   restart: unless-stopped
+
+  # LAZYLIBRARIAN — optional Readarr alternative (see README: Optional services).
+  # lazylibrarian:
+  #   image: lscr.io/linuxserver/lazylibrarian:latest
+  #   container_name: lazylibrarian
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #     - DOCKER_MODS=linuxserver/mods:lazylibrarian-ffmpeg
+  #   volumes:
+  #     - ${CONFIG_DIR}/lazylibrarian:/config
+  #     - ${DATA_DIR}:/data
+  #   ports:
+  #     - "${LAZYLIBRARIAN_PORT}:5299"
+  #   restart: unless-stopped
+
+  # SABNZBD — optional usenet client (see README: Optional services).
+  # sabnzbd:
+  #   image: lscr.io/linuxserver/sabnzbd:latest
+  #   container_name: sabnzbd
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR}/sabnzbd:/config
+  #     - ${DATA_DIR}/usenet:/data/usenet
+  #   ports:
+  #     - "${SABNZBD_PORT}:8080"
+  #   restart: unless-stopped

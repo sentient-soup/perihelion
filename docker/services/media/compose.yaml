@@ -1,0 +1,47 @@
+# Media serving — Jellyfin (+ optional jellysignal). Docs: ../../README.md
+
+services:
+  # JELLYFIN — media server with VAAPI hardware transcoding.
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.10
+    container_name: jellyfin
+    user: ${PUID}:${PGID}
+    ports:
+      - 8096:8096/tcp
+      - 8920:8920/tcp
+      - 7359:7359/udp
+      - 1900:1900/udp
+    volumes:
+      - ${CONFIG_DIR}/jellyfin:/config
+      # Libraries live at /media/{movies,shows,music}. The mount also contains
+      # torrents/photos/etc — read-only, just don't add them as libraries.
+      - ${DATA_DIR}:/media:ro
+      - jellyfin-cache:/cache
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - '${JELLYFIN_RENDER_GROUP}'
+      - '${JELLYFIN_VIDEO_GROUP}'
+    environment:
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URI}
+    restart: unless-stopped
+
+  # JELLYSIGNAL — optional push notifications (see README: Optional services).
+  # jellysignal:
+  #   image: ghcr.io/sentient-soup/jellysignal:latest
+  #   container_name: jellysignal
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8099:3000"
+  #   environment:
+  #     - JELLYFIN_URL=${JELLYFIN_URL}
+  #     - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+  #     - TMDB_API_KEY=${TMDB_API_KEY}
+  #     - SESSION_SECRET=${SESSION_SECRET}
+  #   volumes:
+  #     - jellysignal-data:/app/data
+
+volumes:
+  jellyfin-cache:
+  # jellysignal-data:

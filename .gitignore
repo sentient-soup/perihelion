@@ -7,8 +7,9 @@
 /tmp/
 
 # Local secret values consumed by scripts/generate-secret.sh — never commit
-.env
-.env.local
+# (anchored to repo root: docker/.env is non-sensitive and IS committed)
+/.env
+/.env.local
 
 
 .claude/settings.local.json
