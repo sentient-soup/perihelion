@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-GitOps repository for a k3s homelab cluster (`perihelion.live`). All cluster state is declared here and applied via ArgoCD. There are no build steps — changes take effect when pushed to `main` and ArgoCD syncs.
+Configuration monorepo for the `perihelion.live` homelab, with two independent deployment surfaces:
+
+- **`k8s/`** — GitOps for the k3s cluster. All cluster state is declared here and applied via ArgoCD. No build steps — changes take effect when pushed to `main` and ArgoCD syncs.
+- **`docker/`** — Docker Compose stack for the standalone media/files node (`phis4`). **Not GitOps**: changes here do nothing until pulled on the host and applied with `docker compose up -d`. See `docker/README.md` for the full deploy/secrets workflow.
+
+Most of this file documents the k8s side; see the Docker node section at the end for the phis4 conventions.
 
 ## Cluster interaction
 
@@ -17,7 +22,7 @@ kubectl logs -n <namespace> <pod> --tail=50      # diagnose a failing pod
 kubectl describe certificate <name> -n <ns>      # cert-manager cert status and ACME progress
 ```
 
-Secrets are managed with Sealed Secrets — see the **Secrets pattern** section for the `scripts/generate-secret.sh` workflow.
+Secrets are managed with Sealed Secrets — see the **Secrets pattern** section for the `k8s/scripts/generate-secret.sh` workflow.
 
 ## Repository structure
 
@@ -26,6 +31,10 @@ k8s/
   bootstrap/        # Root ArgoCD "app of apps" that watches k8s/apps/ recursively
   apps/             # ArgoCD Applications, grouped into infra/ platform/ services/
   manifests/        # Raw Kubernetes manifests referenced by path-based apps
+  scripts/          # generate-secret.sh (sealed-secrets workflow)
+  pub-cert.pem      # sealed-secrets controller public cert (offline sealing)
+  .env.example      # template for the git-ignored k8s/.env used by the script
+docker/             # phis4 compose stack (see docker/README.md)
 ```
 
 **App of Apps pattern:** `bootstrap/root-app.yaml` points ArgoCD at `k8s/apps/` recursively. Every file there is an ArgoCD `Application` that references either a Helm chart or a path in `k8s/manifests/`. There is no `apps-staging/` — everything under `k8s/apps/` is live.
@@ -83,7 +92,7 @@ nginx (`k8s/manifests/services/nginx/`) is a raw nginx deployment (not the nginx
 
 All secrets in `k8s/manifests/` are `SealedSecret` resources (encrypted, safe to commit). They decrypt to regular `Secret` objects via the Sealed Secrets controller running in the `infra` namespace. Never commit plain `Secret` resources.
 
-**Generating/rotating:** use `scripts/generate-secret.sh <cloudflare|pihole|traefik-dashboard|all>`. It reads plaintext values from a git-ignored `.env` (template: `.env.example`) and seals **offline** against the committed `pub-cert.pem` — no cluster or kubeconfig required. `kubectl` must be on `PATH` but only renders the secret locally (`--dry-run=client`); the controller's public cert (`pub-cert.pem`) is safe to commit and is what enables offline sealing. Refresh it only if the controller's keypair rotates: `kubeseal --controller-namespace infra --fetch-cert > pub-cert.pem`. To add a new secret, copy a `gen_*` function in the script.
+**Generating/rotating:** use `k8s/scripts/generate-secret.sh <cloudflare|pihole|traefik-dashboard|all>`. It reads plaintext values from a git-ignored `k8s/.env` (template: `k8s/.env.example`) and seals **offline** against the committed `k8s/pub-cert.pem` — no cluster or kubeconfig required. `kubectl` must be on `PATH` but only renders the secret locally (`--dry-run=client`); the controller's public cert is safe to commit and is what enables offline sealing. Refresh it only if the controller's keypair rotates: `kubeseal --controller-namespace infra --fetch-cert > k8s/pub-cert.pem`. To add a new secret, copy a `gen_*` function in the script.
 
 **Strict-scope gotcha:** a SealedSecret's ciphertext is cryptographically bound to the exact `namespace` + `name` it was sealed under. You cannot move or rename one by editing the YAML — the controller will refuse to decrypt; you must re-seal. In particular, a `ClusterIssuer` reads its credential from the `cert-manager` namespace, so the Cloudflare token must be sealed for `cert-manager` (secret `cloudflare-api-token`, key `api-token`), not `default`.
 
@@ -94,3 +103,13 @@ Domain: `perihelion.live`. cert-manager handles certificate lifecycle (replaces 
 - **Issuer:** a single `ClusterIssuer` named `letsencrypt` (Let's Encrypt prod, no staging) at `k8s/manifests/infra/cert-manager/cluster-issuer.yaml`. Solver is **DNS-01 via Cloudflare** (`apiTokenSecretRef`), scoped to the `perihelion.live` zone. DNS-01 is what allows wildcard certs and needs no public ingress.
 - **Wildcard cert:** `k8s/manifests/platform/traefik/certificate.yaml` requests `*.perihelion.live` (+ apex) into secret `wildcard-perihelion-tls` in the `traefik` namespace, for Traefik to serve TLS for all subdomains.
 - **Cloudflare token:** scoped API token (Zone→DNS→Edit, Zone→Read), stored as the `cloudflare-api-token` SealedSecret — see Secrets pattern.
+
+## Docker node (phis4)
+
+`docker/` holds the Compose stack for the standalone media/files host (Jellyfin, *arr ingest behind a gluetun VPN, Immich, Nextcloud AIO, Audiobookshelf, monitoring). Key differences from the k8s side:
+
+- **Not GitOps.** Nothing reconciles automatically — the user pulls on phis4 and runs `docker compose` there. This machine cannot reach phis4 either; produce config changes and give the user the commands to run.
+- **Migration in progress:** phis4 is still running its original monolithic compose file. This repo's `docker/` tree is the decomposed replacement and has **not been cut over yet** — treat the host's running state as authoritative when they disagree, and call out anything that would change runtime behavior on cutover.
+- **Secrets use SOPS + age**, not Sealed Secrets: committed `services/*/secrets.enc.env` files decrypt to git-ignored `.secrets.env` on the host. The age key setup is not yet complete (`.sops.yaml` still has a placeholder public key; the `secrets.enc.env` files are committed as plaintext `REPLACE_ME` templates).
+- **All images are pinned** to exact versions or digests; updates are intentional, one service at a time. Don't bump tags casually — see `docker/README.md` for the update workflow and the gluetun/Nextcloud-AIO exceptions.
+- `docker/.env` is non-sensitive and **is committed** (the root `.gitignore` only ignores `k8s/.env`).

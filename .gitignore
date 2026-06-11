@@ -6,10 +6,10 @@
 # temp staging area
 /tmp/
 
-# Local secret values consumed by scripts/generate-secret.sh — never commit
-# (anchored to repo root: docker/.env is non-sensitive and IS committed)
-/.env
-/.env.local
+# Local secret values consumed by k8s/scripts/generate-secret.sh — never commit
+# (anchored: docker/.env is non-sensitive and IS committed)
+/k8s/.env
+/k8s/.env.local
 
 
 .claude/settings.local.json
