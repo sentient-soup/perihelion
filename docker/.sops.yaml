@@ -3,4 +3,4 @@
 creation_rules:
   - path_regex: services/.*/secrets\.enc\.env$
     age: >-
-      age1REPLACE_WITH_YOUR_AGE_PUBLIC_KEY
+      age1frvtkv2r0jd6khtg0pr7m890guxr65x90pfctm6uuh9nk8c8qsaqgpckzv
