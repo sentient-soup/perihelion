@@ -8,10 +8,9 @@ under `services/` via `include:` (requires Docker Compose **v2.20+**).
 docker/
   docker-compose.yaml          # root — wires groups + their env files
   .env                         # non-sensitive config (committed)
-  .sops.yaml                   # SOPS encryption rules
   services/<group>/compose.yaml        # media, ingest, photos, files, books, monitoring
-  services/<group>/secrets.enc.env     # SOPS-encrypted secrets (committed)
-  services/<group>/.secrets.env        # decrypted at deploy time (gitignored)
+  services/<group>/.secrets.env.example # secret template (committed)
+  services/<group>/.secrets.env        # real secret values (gitignored, host-only)
   bootstrap/setup.sh           # one-time directory provisioning
   bootstrap/sync-qbit-port.sh  # cron: gluetun forwarded port → qBittorrent
 ```
@@ -26,9 +25,10 @@ git clone <repo> /opt/homelab && cd /opt/homelab/docker
 # 2. Provision data/config directories
 sudo bash bootstrap/setup.sh
 
-# 3. Decrypt secrets (see Secrets below for key setup)
-sops -d services/ingest/secrets.enc.env > services/ingest/.secrets.env
-sops -d services/photos/secrets.enc.env > services/photos/.secrets.env
+# 3. Create secret files from templates and fill in real values (see Secrets below)
+cp services/ingest/.secrets.env.example services/ingest/.secrets.env
+cp services/photos/.secrets.env.example services/photos/.secrets.env
+${EDITOR:-nano} services/ingest/.secrets.env services/photos/.secrets.env
 
 # 4. Start everything
 docker compose up -d
@@ -37,19 +37,17 @@ docker compose up -d
 # */5 * * * * /opt/homelab/docker/bootstrap/sync-qbit-port.sh >> /var/log/qbit-port-sync.log 2>&1
 ```
 
-## Secrets (SOPS + age)
+## Secrets
 
-One-time key setup:
+Real values live only on the host in `services/<group>/.secrets.env`, which is
+gitignored. The committed `.secrets.env.example` files document which keys each
+group needs. Compose reads `.secrets.env` via the `env_file` lists in
+[docker-compose.yaml](docker-compose.yaml).
 
-```bash
-age-keygen -o ~/.config/sops/age/keys.txt     # public key (age1...) goes in .sops.yaml
-export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
-```
-
-- **Edit an encrypted file:** `sops services/<group>/secrets.enc.env`
-  (opens decrypted in `$EDITOR`, re-encrypts on save)
-- **Create a new one:** write plaintext, then `sops -e -i secrets.enc.env`, then commit
-- **Deploy:** `sops -d secrets.enc.env > .secrets.env` (gitignored — never commit)
+- **Set up / rotate:** `cp .secrets.env.example .secrets.env`, then edit in real
+  values. Back them up to a password manager — they are not in git.
+- **Add a new key:** add it to both the `.example` template (committed) and the
+  host's `.secrets.env`.
 
 ## Storage layout
 
@@ -94,7 +92,7 @@ ${DATA_DIR}/
 All torrent traffic routes through gluetun (ProtonVPN WireGuard);
 qBittorrent and seedboxapi share its network namespace. Generate the
 WireGuard key at <https://account.proton.me/u/0/vpn/WireGuard> →
-`PROTON_WIREGUARD_PRIVATE_KEY` in `services/ingest/secrets.enc.env`.
+`PROTON_WIREGUARD_PRIVATE_KEY` in `services/ingest/.secrets.env`.
 
 ProtonVPN assigns a random forwarded port; `bootstrap/sync-qbit-port.sh`
 (cron, every 5 min) reads it from gluetun's control server and updates
@@ -133,9 +131,9 @@ Exceptions:
 
 ## Optional services (commented out in compose files)
 
-- **jellysignal** (media) — fill in `services/media/secrets.enc.env`, add
-  `services/media/.secrets.env` to the media `env_file` list in
-  docker-compose.yaml, decrypt, and uncomment.
+- **jellysignal** (media) — `cp services/media/.secrets.env.example
+  services/media/.secrets.env` and fill in, add `services/media/.secrets.env`
+  to the media `env_file` list in docker-compose.yaml, and uncomment.
 - **SABnzbd** (ingest) — when subscribed to NewsDemon + NZBGeek. Server
   `news.newsdemon.com:563`, SSL, 50 connections. Add as priority-1 download
   client in the *arr apps, demote qBittorrent to priority-2, and add the

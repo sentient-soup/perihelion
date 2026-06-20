@@ -1,6 +1,0 @@
-# SOPS encryption rules for phis4 Docker secrets. Workflow: README.md
-
-creation_rules:
-  - path_regex: services/.*/secrets\.enc\.env$
-    age: >-
-      age1frvtkv2r0jd6khtg0pr7m890guxr65x90pfctm6uuh9nk8c8qsaqgpckzv

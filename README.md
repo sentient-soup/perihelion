@@ -35,7 +35,7 @@ committed and plaintext files are git-ignored:
 | Surface | Mechanism | Committed artifact | Plaintext (ignored) |
 |---|---|---|---|
 | k8s | Sealed Secrets (kubeseal, sealed offline against `k8s/pub-cert.pem`) | `**/sealed-secret.yaml` | `k8s/.env` |
-| docker | SOPS + age | `services/*/secrets.enc.env` | `docker/services/*/.secrets.env` |
+| docker | Gitignored plaintext (host-only) | `services/*/.secrets.env.example` | `docker/services/*/.secrets.env` |
 
 ## Conventions
 

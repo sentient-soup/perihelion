@@ -14,7 +14,5 @@
 
 .claude/settings.local.json
 
-# Docker: SOPS-decrypted secrets (generated at deploy time, never commit)
+# Docker: real secret values (copied from .secrets.env.example on the host, never commit)
 docker/**/.secrets.env
-# Docker: unencrypted staging file before SOPS encryption (use secrets.enc.env instead)
-docker/**/secrets.env
