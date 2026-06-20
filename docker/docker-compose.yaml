@@ -33,3 +33,9 @@ include:
   # Monitoring (victoriametrics, node_exporter, cadvisor)
   - path: services/monitoring/compose.yaml
     env_file: .env
+
+  # Odysseus AI workspace (+ bundled searxng, chromadb, ntfy)
+  - path: services/odysseus/compose.yaml
+    env_file:
+      - .env
+      - services/odysseus/.secrets.env

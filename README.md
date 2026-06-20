@@ -22,10 +22,9 @@ side's secrets tooling.
 
 ## Status
 
-The phis4 docker migration is **in progress**: the host still runs its
-original monolithic compose file; the decomposed stack in `docker/` has not
-been cut over yet. On the k8s side, the nginx → Traefik routing migration is
-also still underway.
+The phis4 docker migration is **complete**: the decomposed stack in `docker/`
+is live on the host (the old monolith is archived off to the side). On the k8s
+side, the nginx → Traefik routing migration is still underway.
 
 ## Secrets
 

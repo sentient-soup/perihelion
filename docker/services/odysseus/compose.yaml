@@ -1,0 +1,114 @@
+# Odysseus — self-hosted AI workspace (chat, agents, research, docs, email,
+# notes, calendar). Bundles its own searxng + chromadb + ntfy.
+# Docs: ../../README.md
+#
+# Upstream only publishes dev tags (1.0.0-dev.<sha>) — bump ODYSSEUS_VERSION in
+# .env deliberately, like every other image here.
+
+services:
+  odysseus:
+    image: ghcr.io/pewdiepie-archdaemon/odysseus:${ODYSSEUS_VERSION}
+    container_name: odysseus
+    ports:
+      - ${ODYSSEUS_PORT:-7000}:7000
+    volumes:
+      - ${CONFIG_DIR}/odysseus/data:/app/data:z
+      - ${CONFIG_DIR}/odysseus/logs:/app/logs:z
+      - ${CONFIG_DIR}/odysseus/data/ssh:/app/.ssh:z
+      - ${CONFIG_DIR}/odysseus/data/huggingface:/app/.cache/huggingface:z
+      - ${CONFIG_DIR}/odysseus/data/local:/app/.local:z
+    extra_hosts:
+      # Reach host services (e.g. Ollama at http://host.docker.internal:11434).
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Internal wiring to the bundled services (by compose DNS name).
+      - SEARXNG_INSTANCE=http://searxng:8080
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      # LAN-exposed, so auth on / loopback-bypass off (also the app defaults).
+      - AUTH_ENABLED=true
+      - LOCALHOST_BYPASS=false
+      - ODYSSEUS_ADMIN_USER=${ODYSSEUS_ADMIN_USER:-admin}
+      - ODYSSEUS_ADMIN_PASSWORD=${ODYSSEUS_ADMIN_PASSWORD:-}
+      # Optional model/search credentials — blank unless set in .secrets.env.
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+      - DATA_BRAVE_API_KEY=${DATA_BRAVE_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - SERPER_API_KEY=${SERPER_API_KEY:-}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+    depends_on:
+      searxng:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    restart: unless-stopped
+
+  chromadb:
+    image: docker.io/chromadb/chroma:latest
+    container_name: odysseus_chromadb
+    volumes:
+      - ${CONFIG_DIR}/odysseus/chromadb:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+
+  searxng:
+    # Pinned, not :latest — odysseus waits on searxng's healthcheck
+    # (depends_on: service_healthy), so a broken upstream `latest` blocks the
+    # whole app. 2026.6.2 crashes on boot (KeyError 'default_doi_resolver',
+    # upstream issue #1414). Bump deliberately after verifying a clean boot.
+    image: docker.io/searxng/searxng:2026.5.31-7159b8aed
+    container_name: odysseus_searxng
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        if [ ! -s /etc/searxng/settings.yml ] || grep -q 'odysseus-local-searxng-json-2026-05-30\|__SEARXNG_SECRET__' /etc/searxng/settings.yml; then
+          secret="$${SEARXNG_SECRET:-}"
+          if [ -z "$$secret" ]; then
+            secret="$$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          fi
+          sed "s|__SEARXNG_SECRET__|$$secret|g" /tmp/searxng-settings.yml.template > /etc/searxng/settings.yml
+        fi
+        exec /usr/local/searxng/entrypoint.sh
+    volumes:
+      - ${CONFIG_DIR}/odysseus/searxng:/etc/searxng
+      - ./config/searxng/settings.yml:/tmp/searxng-settings.yml.template:ro,z
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-}
+    # The searxng entrypoint chowns /etc/searxng on first boot then drops privs
+    # via su-exec; without these caps the wrapper aborts with EACCES and fails
+    # its healthcheck. Mirrors upstream searxng-docker. See odysseus issue #721.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read(1)\""]
+      interval: 5s
+      timeout: 6s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  ntfy:
+    image: docker.io/binwiederhier/ntfy
+    container_name: odysseus_ntfy
+    command: serve
+    ports:
+      - ${NTFY_PORT:-8091}:80
+    volumes:
+      - ${CONFIG_DIR}/odysseus/ntfy:/var/cache/ntfy
+    environment:
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8091}
+    restart: unless-stopped

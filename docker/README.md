@@ -28,7 +28,8 @@ sudo bash bootstrap/setup.sh
 # 3. Create secret files from templates and fill in real values (see Secrets below)
 cp services/ingest/.secrets.env.example services/ingest/.secrets.env
 cp services/photos/.secrets.env.example services/photos/.secrets.env
-${EDITOR:-nano} services/ingest/.secrets.env services/photos/.secrets.env
+cp services/odysseus/.secrets.env.example services/odysseus/.secrets.env
+${EDITOR:-nano} services/ingest/.secrets.env services/photos/.secrets.env services/odysseus/.secrets.env
 
 # 4. Start everything
 docker compose up -d
@@ -86,6 +87,9 @@ ${DATA_DIR}/
 | monitoring | VictoriaMetrics | 8428 | scrape config: `${CONFIG_DIR}/metrics/scrape.yml` |
 | monitoring | cAdvisor | 8081 | |
 | monitoring | node_exporter | host network (9100) | |
+| odysseus | Odysseus AI workspace | `${ODYSSEUS_PORT}` = 7000 | image pinned via `${ODYSSEUS_VERSION}` |
+| odysseus | ntfy | `${NTFY_PORT}` = 8091 | bundled notification server |
+| odysseus | searxng / chromadb | internal only | reached by compose DNS, no host port |
 
 ## VPN / port forwarding
 
@@ -128,6 +132,29 @@ Exceptions:
 - **Nextcloud AIO** stays on `latest` deliberately — it only publishes
   `latest`/`beta` and manages its own updates (and its `nextcloud-aio-*`
   child containers) through the AIO admin UI.
+- **Odysseus** publishes only dev tags (`1.0.0-dev.<sha>`), pinned via
+  `ODYSSEUS_VERSION` in `.env`. Its bundled `chromadb` (`:latest`) and `ntfy`
+  (untagged) follow upstream's compose; `searxng` is pinned in the compose
+  (see the note there). The mounted searxng config is vendored at
+  `services/odysseus/config/searxng/settings.yml`.
+
+## Operational notes
+
+- **Project identity is pinned** (`name: phis4` in docker-compose.yaml),
+  independent of the directory — the stack folder can be moved or renamed
+  freely without disturbing containers. All state is on bind mounts (absolute
+  host paths); the only Docker-named volumes are `nextcloud_aio_mastercontainer`
+  (fixed name) and `immich-model-cache` (regenerable ML cache).
+- **Never `docker compose down -v`** — `-v` deletes named volumes, including the
+  Nextcloud AIO master volume.
+- **Nextcloud AIO:** only `nextcloud-aio-mastercontainer` is compose-managed. It
+  spawns the other `nextcloud-aio-*` containers via the Docker socket, so they
+  are not part of the compose project and keep running through a `compose down`
+  (Nextcloud serves traffic across a stack restart). `NEXTCLOUD_DATADIR` is fixed
+  at install time — changing it later is ignored.
+- **Immich DB password** (`IMMICH_DB_PASSWORD`) is baked into the Postgres data
+  dir at first init. On a rebuild/restore it must match the original value or
+  immich-server can't connect to its database.
 
 ## Optional services (commented out in compose files)
 

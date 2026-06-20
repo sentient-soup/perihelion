@@ -55,7 +55,12 @@ mkdir -p \
     "${CONFIG_DIR}/audiobookshelf/config" \
     "${CONFIG_DIR}/audiobookshelf/metadata" \
     "${CONFIG_DIR}/immich/db" \
-    "${CONFIG_DIR}/metrics"
+    "${CONFIG_DIR}/metrics" \
+    "${CONFIG_DIR}/odysseus/data" \
+    "${CONFIG_DIR}/odysseus/logs" \
+    "${CONFIG_DIR}/odysseus/searxng" \
+    "${CONFIG_DIR}/odysseus/chromadb" \
+    "${CONFIG_DIR}/odysseus/ntfy"
 
 echo "Setting ownership on config directories..."
 chown -R "${PUID}:${PGID}" "${CONFIG_DIR}"
@@ -64,5 +69,6 @@ echo "=== Secrets ==="
 echo "Create secret files from templates and fill in real values before starting:"
 echo "  cp docker/services/ingest/.secrets.env.example docker/services/ingest/.secrets.env"
 echo "  cp docker/services/photos/.secrets.env.example docker/services/photos/.secrets.env"
+echo "  cp docker/services/odysseus/.secrets.env.example docker/services/odysseus/.secrets.env"
 echo ""
 echo "Setup complete. Run 'docker compose up -d' from docker/ when ready."
