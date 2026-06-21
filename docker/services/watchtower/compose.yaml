@@ -1,0 +1,23 @@
+# Watchtower — auto-updates ONLY opted-in containers. Docs: ../../README.md
+#
+# Opt a container in by adding this label to its service:
+#   labels:
+#     - com.centurylinklabs.watchtower.enable=true
+# and giving it a MOVING tag (e.g. :latest or :main) instead of a pinned
+# version/digest. Every other service in the stack is ignored and stays pinned.
+
+services:
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_LABEL_ENABLE=true   # only update containers with the enable label
+      - WATCHTOWER_CLEANUP=true        # prune the old image after a successful update
+      - WATCHTOWER_POLL_INTERVAL=300   # check the registry every 5 min
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Private GHCR packages: create the auth file on the host (see README),
+      # then uncomment to let watchtower pull them:
+      # - ${CONFIG_DIR}/watchtower/config.json:/config.json:ro

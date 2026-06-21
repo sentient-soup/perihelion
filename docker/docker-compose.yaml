@@ -34,6 +34,10 @@ include:
   - path: services/monitoring/compose.yaml
     env_file: .env
 
+  # Watchtower (auto-updates only label-opted-in containers; see README)
+  - path: services/watchtower/compose.yaml
+    env_file: .env
+
   # Odysseus AI workspace (+ bundled searxng, chromadb, ntfy)
   - path: services/odysseus/compose.yaml
     env_file:

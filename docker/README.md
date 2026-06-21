@@ -124,6 +124,27 @@ version tags). Update intentionally, one service at a time:
 docker compose pull <service> && docker compose up -d <service>
 ```
 
+The one auto-update path is **Watchtower** (`services/watchtower/`), which runs
+in **label opt-in** mode (`WATCHTOWER_LABEL_ENABLE=true`): it touches *only*
+containers that carry the enable label and ignores everything else, so the
+pinned stack stays frozen. To put a self-developed app on auto-deploy:
+
+1. Give it a **moving tag**, e.g. `image: ghcr.io/<you>/<app>:latest` (not a
+   pinned version/digest — watchtower follows the digest behind the tag).
+2. Add the label to its service:
+   ```yaml
+   labels:
+     - com.centurylinklabs.watchtower.enable=true
+   ```
+
+Watchtower pulls + recreates the container in place every 5 min when the tag's
+digest changes; it does **not** rewrite compose or git, so there's no deploy
+audit trail (the trade-off vs ArgoCD on the k8s side). **Private GHCR
+packages** need host auth: create `${CONFIG_DIR}/watchtower/config.json` (a
+Docker `config.json` with a `read:packages` PAT under `auths`), then uncomment
+the `config.json` volume in `services/watchtower/compose.yaml`. Public packages
+need nothing.
+
 Exceptions:
 - **gluetun** is digest-pinned to a master build (its `latest` tracks master,
   ahead of release v3.41.1). Move to a release tag at next maintenance;
