@@ -1,0 +1,28 @@
+# Cadence — personal fitness tracker (calories, exercise, metrics). PWA + node
+# backend, SQLite. Docs: ../../README.md
+#
+# Auto-updated: tracks :latest and carries the watchtower opt-in label, so a new
+# ghcr push is pulled + redeployed within ~5 min. This is the first app on that
+# path (see services/watchtower/).
+
+services:
+  cadence:
+    image: ghcr.io/sentient-soup/cadence:latest
+    container_name: cadence
+    restart: unless-stopped
+    ports:
+      - ${CADENCE_PORT}:3000
+    volumes:
+      # SQLite db on a host bind mount (stack convention: all state on bind
+      # mounts). If the app runs non-root and can't write, chown this dir to
+      # the container's uid. ponytail: bind mount, switch to named volume only
+      # if perms fight back.
+      - ${CONFIG_DIR}/cadence:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=${TZ}
+    env_file:
+      - .secrets.env
+    labels:
+      - com.centurylinklabs.watchtower.enable=true

@@ -84,6 +84,7 @@ ${DATA_DIR}/
 | photos | Immich | 2283 | |
 | files | Nextcloud AIO admin | 8080 (apache on 11000) | |
 | books | Audiobookshelf | 13378 | |
+| cadence | Cadence | `${CADENCE_PORT}` = 3000 | fitness tracker; `:latest` + watchtower auto-update |
 | monitoring | VictoriaMetrics | 8428 | scrape config: `${CONFIG_DIR}/metrics/scrape.yml` |
 | monitoring | cAdvisor | 8081 | |
 | monitoring | node_exporter | host network (9100) | |

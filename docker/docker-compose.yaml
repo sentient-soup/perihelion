@@ -30,6 +30,12 @@ include:
   - path: services/books/compose.yaml
     env_file: .env
 
+  # Cadence (fitness tracker; auto-updated via watchtower)
+  - path: services/cadence/compose.yaml
+    env_file:
+      - .env
+      - services/cadence/.secrets.env
+
   # Monitoring (victoriametrics, node_exporter, cadvisor)
   - path: services/monitoring/compose.yaml
     env_file: .env
