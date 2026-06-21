@@ -195,38 +195,6 @@ spec:
         - name: web-security-headers
   tls: {}
 # ===========================================================================
-# ll.perihelion.live -> lazylibrarian :5299
-# ===========================================================================
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: lazylibrarian
-  namespace: external
-spec:
-  type: ExternalName
-  externalName: "192.168.1.215"
-  ports:
-    - port: 5299
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: lazylibrarian
-  namespace: external
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`ll.perihelion.live`)
-      kind: Rule
-      services:
-        - name: lazylibrarian
-          port: 5299
-      middlewares:
-        - name: web-security-headers
-  tls: {}
-# ===========================================================================
 # jellyseerr :5055 — served on two hostnames (request + jellyseerr), so one
 # Service/EndpointSlice with two IngressRoutes.
 # ===========================================================================
