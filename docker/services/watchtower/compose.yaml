@@ -1,5 +1,10 @@
 # Watchtower — auto-updates ONLY opted-in containers. Docs: ../../README.md
 #
+# Image is the actively-maintained nicholas-fedor fork: the original
+# containrrr/watchtower is unmaintained and ships a Docker client that only
+# speaks API 1.25, which Docker Engine v29+ rejects (min API now 1.44). The fork
+# is a drop-in replacement (same env vars + same enable label).
+#
 # Opt a container in by adding this label to its service:
 #   labels:
 #     - com.centurylinklabs.watchtower.enable=true
@@ -8,7 +13,7 @@
 
 services:
   watchtower:
-    image: containrrr/watchtower:1.7.1
+    image: ghcr.io/nicholas-fedor/watchtower:1.18.1
     container_name: watchtower
     restart: unless-stopped
     environment:
