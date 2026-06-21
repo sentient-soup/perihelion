@@ -15,16 +15,20 @@ spec:
     - port: 8085
       targetPort: 8085
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: qbittorrent
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 8085
+  labels:
+    kubernetes.io/service-name: qbittorrent
+addressType: IPv4
+ports:
+  - port: 8085
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -58,16 +62,20 @@ spec:
     - port: 9696
       targetPort: 9696
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: prowlarr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 9696
+  labels:
+    kubernetes.io/service-name: prowlarr
+addressType: IPv4
+ports:
+  - port: 9696
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -100,16 +108,20 @@ spec:
     - port: 7878
       targetPort: 7878
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: radarr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 7878
+  labels:
+    kubernetes.io/service-name: radarr
+addressType: IPv4
+ports:
+  - port: 7878
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -142,16 +154,20 @@ spec:
     - port: 8989
       targetPort: 8989
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: sonarr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 8989
+  labels:
+    kubernetes.io/service-name: sonarr
+addressType: IPv4
+ports:
+  - port: 8989
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -184,16 +200,20 @@ spec:
     - port: 8686
       targetPort: 8686
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: lidarr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 8686
+  labels:
+    kubernetes.io/service-name: lidarr
+addressType: IPv4
+ports:
+  - port: 8686
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -226,16 +246,20 @@ spec:
     - port: 8787
       targetPort: 8787
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: readarr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 8787
+  labels:
+    kubernetes.io/service-name: readarr
+addressType: IPv4
+ports:
+  - port: 8787
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -268,16 +292,20 @@ spec:
     - port: 5299
       targetPort: 5299
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: lazylibrarian
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 5299
+  labels:
+    kubernetes.io/service-name: lazylibrarian
+addressType: IPv4
+ports:
+  - port: 5299
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -311,16 +339,20 @@ spec:
     - port: 5055
       targetPort: 5055
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: jellyseerr
   namespace: external
-subsets:
-  - addresses:
-      - ip: 192.168.1.215
-    ports:
-      - port: 5055
+  labels:
+    kubernetes.io/service-name: jellyseerr
+addressType: IPv4
+ports:
+  - port: 5055
+endpoints:
+  - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
