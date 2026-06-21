@@ -27,6 +27,8 @@ ports:
   - port: 8085
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -72,6 +74,8 @@ ports:
   - port: 9696
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -116,6 +120,8 @@ ports:
   - port: 7878
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -160,6 +166,8 @@ ports:
   - port: 8989
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -204,6 +212,8 @@ ports:
   - port: 8686
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -248,6 +258,8 @@ ports:
   - port: 8787
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -292,6 +304,8 @@ ports:
   - port: 5299
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -337,6 +351,8 @@ ports:
   - port: 5055
 endpoints:
   - addresses: ["192.168.1.215"]
+    conditions:
+      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
