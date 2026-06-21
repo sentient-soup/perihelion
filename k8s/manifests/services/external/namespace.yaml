@@ -1,7 +1,10 @@
 # Routes for services that live on the phis4 docker host (192.168.1.215),
-# outside the cluster. Each host below is a selectorless Service + manual
-# EndpointSlice (the external IP) + an IngressRoute. Replaces the old nginx
-# reverse proxy that used to run on phis1.
+# outside the cluster. Each host below is an ExternalName Service pointed at
+# that IP + an IngressRoute. (ExternalName instead of a selectorless Service +
+# EndpointSlice because ArgoCD's default resource.exclusions drops Endpoints and
+# EndpointSlice, so it would never apply them.) Traefik needs
+# providers.kubernetesCRD.allowExternalNameServices=true, set in the chart values
+# in k8s/apps/platform/traefik.yaml. Replaces the old nginx proxy on phis1.
 apiVersion: v1
 kind: Namespace
 metadata:

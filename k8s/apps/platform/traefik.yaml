@@ -33,6 +33,10 @@ spec:
             enabled: true
           kubernetesCRD:
             enabled: true
+            # Lets IngressRoutes target ExternalName Services. Our `external` ns
+            # routes to the off-cluster phis4 host (192.168.1.215) via ExternalName
+            # Services pointed at that IP. Off by default in Traefik.
+            allowExternalNameServices: true
         logs:
           general:
             level: INFO

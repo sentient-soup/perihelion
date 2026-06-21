@@ -1,6 +1,6 @@
-# The *arr ingest stack + qBittorrent + jellyseerr, all on phis4. Each host is a
-# selectorless Service + EndpointSlice + IngressRoute. All carry the shared
-# web-security-headers middleware; qBittorrent additionally needs qbit-referer.
+# The *arr ingest stack + qBittorrent + jellyseerr, all on phis4. Each host is an
+# ExternalName Service + IngressRoute. All carry the shared web-security-headers
+# middleware; qBittorrent additionally needs qbit-referer.
 # ===========================================================================
 # torrent.perihelion.live -> qBittorrent :8085
 # ===========================================================================
@@ -11,24 +11,10 @@ metadata:
   name: qbittorrent
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 8085
-      targetPort: 8085
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: qbittorrent
-  namespace: external
-  labels:
-    kubernetes.io/service-name: qbittorrent
-addressType: IPv4
-ports:
-  - port: 8085
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -58,24 +44,10 @@ metadata:
   name: prowlarr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 9696
-      targetPort: 9696
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: prowlarr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: prowlarr
-addressType: IPv4
-ports:
-  - port: 9696
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -104,24 +76,10 @@ metadata:
   name: radarr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 7878
-      targetPort: 7878
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: radarr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: radarr
-addressType: IPv4
-ports:
-  - port: 7878
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -150,24 +108,10 @@ metadata:
   name: sonarr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 8989
-      targetPort: 8989
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: sonarr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: sonarr
-addressType: IPv4
-ports:
-  - port: 8989
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -196,24 +140,10 @@ metadata:
   name: lidarr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 8686
-      targetPort: 8686
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: lidarr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: lidarr
-addressType: IPv4
-ports:
-  - port: 8686
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -242,24 +172,10 @@ metadata:
   name: readarr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 8787
-      targetPort: 8787
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: readarr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: readarr
-addressType: IPv4
-ports:
-  - port: 8787
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -288,24 +204,10 @@ metadata:
   name: lazylibrarian
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 5299
-      targetPort: 5299
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: lazylibrarian
-  namespace: external
-  labels:
-    kubernetes.io/service-name: lazylibrarian
-addressType: IPv4
-ports:
-  - port: 5299
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -335,24 +237,10 @@ metadata:
   name: jellyseerr
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 5055
-      targetPort: 5055
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: jellyseerr
-  namespace: external
-  labels:
-    kubernetes.io/service-name: jellyseerr
-addressType: IPv4
-ports:
-  - port: 5055
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

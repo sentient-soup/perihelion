@@ -6,24 +6,10 @@ metadata:
   name: cadence
   namespace: external
 spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
   ports:
     - port: 3000
-      targetPort: 3000
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: cadence
-  namespace: external
-  labels:
-    kubernetes.io/service-name: cadence
-addressType: IPv4
-ports:
-  - port: 3000
-endpoints:
-  - addresses: ["192.168.1.215"]
-    conditions:
-      ready: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
