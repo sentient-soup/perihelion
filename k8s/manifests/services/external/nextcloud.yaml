@@ -1,0 +1,45 @@
+# docs.perihelion.live -> Nextcloud AIO apache on phis4:11000
+# AIO serves its own TLS-internal apache on 11000 and handles the .well-known
+# redirects itself, so we just reverse-proxy. Unlimited upload size + websockets
+# (notify_push) are fine on Traefik's default streaming transport.
+# ponytail: no custom timeouts/buffers; add a serversTransport only if large
+# server-side ops (e.g. occ scans over HTTP) actually time out.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+  namespace: external
+spec:
+  ports:
+    - port: 11000
+      targetPort: 11000
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: nextcloud
+  namespace: external
+  labels:
+    kubernetes.io/service-name: nextcloud
+addressType: IPv4
+ports:
+  - port: 11000
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nextcloud
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`docs.perihelion.live`)
+      kind: Rule
+      services:
+        - name: nextcloud
+          port: 11000
+  tls: {}

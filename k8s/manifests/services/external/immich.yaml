@@ -1,0 +1,43 @@
+# img.perihelion.live -> immich on phis4:2283
+# Large uploads + websockets handled natively by Traefik.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich
+  namespace: external
+spec:
+  ports:
+    - port: 2283
+      targetPort: 2283
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: immich
+  namespace: external
+  labels:
+    kubernetes.io/service-name: immich
+addressType: IPv4
+ports:
+  - port: 2283
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: immich
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`img.perihelion.live`)
+      kind: Rule
+      services:
+        - name: immich
+          port: 2283
+      middlewares:
+        - name: web-security-headers
+  tls: {}

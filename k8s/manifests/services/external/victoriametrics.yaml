@@ -1,0 +1,44 @@
+# metrics.perihelion.live -> VictoriaMetrics on phis4:8428
+# Only the remote-write endpoint is exposed, behind basic auth. Every other path
+# simply has no route and returns 404 (matching the old nginx `location / 404`).
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: victoriametrics
+  namespace: external
+spec:
+  ports:
+    - port: 8428
+      targetPort: 8428
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: victoriametrics
+  namespace: external
+  labels:
+    kubernetes.io/service-name: victoriametrics
+addressType: IPv4
+ports:
+  - port: 8428
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: victoriametrics
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`metrics.perihelion.live`) && Path(`/api/v1/write`)
+      kind: Rule
+      services:
+        - name: victoriametrics
+          port: 8428
+      middlewares:
+        - name: victoriametrics-auth
+  tls: {}

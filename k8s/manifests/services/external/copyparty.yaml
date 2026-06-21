@@ -1,0 +1,44 @@
+# cpp.perihelion.live -> copyparty on phis4:3939
+# Big up/downloads: Traefik streams request/response bodies by default, so no
+# buffering knobs are needed.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: copyparty
+  namespace: external
+spec:
+  ports:
+    - port: 3939
+      targetPort: 3939
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: copyparty
+  namespace: external
+  labels:
+    kubernetes.io/service-name: copyparty
+addressType: IPv4
+ports:
+  - port: 3939
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: copyparty
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`cpp.perihelion.live`)
+      kind: Rule
+      services:
+        - name: copyparty
+          port: 3939
+      middlewares:
+        - name: web-security-headers
+  tls: {}

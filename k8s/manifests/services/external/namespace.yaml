@@ -1,0 +1,8 @@
+# Routes for services that live on the phis4 docker host (192.168.1.215),
+# outside the cluster. Each host below is a selectorless Service + manual
+# EndpointSlice (the external IP) + an IngressRoute. Replaces the old nginx
+# reverse proxy that used to run on phis1.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external

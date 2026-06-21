@@ -1,0 +1,52 @@
+# Shared middlewares for the external routes. Namespaced to `external`, so the
+# IngressRoutes here reference them by bare name.
+---
+# Common security response headers (was duplicated across most nginx vhosts).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: web-security-headers
+  namespace: external
+spec:
+  headers:
+    contentTypeNosniff: true
+    customFrameOptionsValue: SAMEORIGIN
+    browserXssFilter: true
+    referrerPolicy: strict-origin-when-cross-origin
+---
+# Jellyfin's stricter header set (CSP + Permissions-Policy). Kept faithful to the
+# nginx vhost: nosniff + these two, nothing else.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: jellyfin-headers
+  namespace: external
+spec:
+  headers:
+    contentTypeNosniff: true
+    customResponseHeaders:
+      Permissions-Policy: "accelerometer=(), ambient-light-sensor=(), battery=(), bluetooth=(), camera=(), clipboard-read=(), display-capture=(), document-domain=(), encrypted-media=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), interest-cohort=(), keyboard-map=(), local-fonts=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(), serial=(), sync-xhr=(), usb=(), xr-spatial-tracking=()"
+      Content-Security-Policy: "default-src https: data: blob: ; img-src 'self' https://* ; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.youtube.com blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; font-src 'self'"
+---
+# qBittorrent rejects WebUI requests whose Referer doesn't match its own origin
+# (CSRF guard). nginx overrode Referer to the backend; do the same here.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: qbit-referer
+  namespace: external
+spec:
+  headers:
+    customRequestHeaders:
+      Referer: "http://192.168.1.215:8085"
+---
+# Basic-auth for the VictoriaMetrics remote-write endpoint. The secret is sealed
+# separately (run: k8s/scripts/generate-secret.sh victoriametrics).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: victoriametrics-auth
+  namespace: external
+spec:
+  basicAuth:
+    secret: victoriametrics-auth

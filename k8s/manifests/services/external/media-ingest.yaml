@@ -1,0 +1,357 @@
+# The *arr ingest stack + qBittorrent + jellyseerr, all on phis4. Each host is a
+# selectorless Service + EndpointSlice + IngressRoute. All carry the shared
+# web-security-headers middleware; qBittorrent additionally needs qbit-referer.
+# ===========================================================================
+# torrent.perihelion.live -> qBittorrent :8085
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: external
+spec:
+  ports:
+    - port: 8085
+      targetPort: 8085
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: qbittorrent
+  namespace: external
+  labels:
+    kubernetes.io/service-name: qbittorrent
+addressType: IPv4
+ports:
+  - port: 8085
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: qbittorrent
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`torrent.perihelion.live`)
+      kind: Rule
+      services:
+        - name: qbittorrent
+          port: 8085
+      middlewares:
+        - name: web-security-headers
+        - name: qbit-referer
+  tls: {}
+# ===========================================================================
+# prowlarr.perihelion.live -> :9696
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prowlarr
+  namespace: external
+spec:
+  ports:
+    - port: 9696
+      targetPort: 9696
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: prowlarr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: prowlarr
+addressType: IPv4
+ports:
+  - port: 9696
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prowlarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`prowlarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: prowlarr
+          port: 9696
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# radarr.perihelion.live -> :7878
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: radarr
+  namespace: external
+spec:
+  ports:
+    - port: 7878
+      targetPort: 7878
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: radarr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: radarr
+addressType: IPv4
+ports:
+  - port: 7878
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: radarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`radarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: radarr
+          port: 7878
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# sonarr.perihelion.live -> :8989
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr
+  namespace: external
+spec:
+  ports:
+    - port: 8989
+      targetPort: 8989
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: sonarr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: sonarr
+addressType: IPv4
+ports:
+  - port: 8989
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sonarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`sonarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: sonarr
+          port: 8989
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# lidarr.perihelion.live -> :8686
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lidarr
+  namespace: external
+spec:
+  ports:
+    - port: 8686
+      targetPort: 8686
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: lidarr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: lidarr
+addressType: IPv4
+ports:
+  - port: 8686
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: lidarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`lidarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: lidarr
+          port: 8686
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# readarr.perihelion.live -> :8787
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: readarr
+  namespace: external
+spec:
+  ports:
+    - port: 8787
+      targetPort: 8787
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: readarr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: readarr
+addressType: IPv4
+ports:
+  - port: 8787
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: readarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`readarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: readarr
+          port: 8787
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# ll.perihelion.live -> lazylibrarian :5299
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lazylibrarian
+  namespace: external
+spec:
+  ports:
+    - port: 5299
+      targetPort: 5299
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: lazylibrarian
+  namespace: external
+  labels:
+    kubernetes.io/service-name: lazylibrarian
+addressType: IPv4
+ports:
+  - port: 5299
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: lazylibrarian
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`ll.perihelion.live`)
+      kind: Rule
+      services:
+        - name: lazylibrarian
+          port: 5299
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
+# jellyseerr :5055 — served on two hostnames (request + jellyseerr), so one
+# Service/EndpointSlice with two IngressRoutes.
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyseerr
+  namespace: external
+spec:
+  ports:
+    - port: 5055
+      targetPort: 5055
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: jellyseerr
+  namespace: external
+  labels:
+    kubernetes.io/service-name: jellyseerr
+addressType: IPv4
+ports:
+  - port: 5055
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jellyseerr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`request.perihelion.live`) || Host(`jellyseerr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: jellyseerr
+          port: 5055
+      middlewares:
+        - name: web-security-headers
+  tls: {}

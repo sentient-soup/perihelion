@@ -1,0 +1,44 @@
+# media.perihelion.live -> jellyfin on phis4:8096
+# The nginx config had a separate /socket location for websockets; Traefik
+# upgrades websockets on the same route automatically, so one route covers both.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin
+  namespace: external
+spec:
+  ports:
+    - port: 8096
+      targetPort: 8096
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: jellyfin
+  namespace: external
+  labels:
+    kubernetes.io/service-name: jellyfin
+addressType: IPv4
+ports:
+  - port: 8096
+endpoints:
+  - addresses: ["192.168.1.215"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jellyfin
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`media.perihelion.live`)
+      kind: Rule
+      services:
+        - name: jellyfin
+          port: 8096
+      middlewares:
+        - name: jellyfin-headers
+  tls: {}

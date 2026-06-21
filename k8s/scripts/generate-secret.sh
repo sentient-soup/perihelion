@@ -6,6 +6,7 @@
 #   ./k8s/scripts/generate-secret.sh cloudflare         # cert-manager Cloudflare API token
 #   ./k8s/scripts/generate-secret.sh pihole             # Pihole admin password
 #   ./k8s/scripts/generate-secret.sh traefik-dashboard  # Traefik dashboard basic-auth
+#   ./k8s/scripts/generate-secret.sh victoriametrics    # VictoriaMetrics remote-write basic-auth
 #   ./k8s/scripts/generate-secret.sh all                # regenerate all
 #
 # Secret values are read from k8s/.env (git-ignored; see k8s/.env.example).
@@ -37,6 +38,7 @@ Targets:
   cloudflare         Cloudflare API token   -> k8s/manifests/infra/cert-manager/sealed-secret.yaml
   pihole             Pihole admin password  -> k8s/manifests/services/pihole/sealed-secret.yaml
   traefik-dashboard  Dashboard basic-auth   -> k8s/manifests/platform/traefik/dashboard-auth-sealed-secret.yaml
+  victoriametrics    VM remote-write auth   -> k8s/manifests/services/external/victoriametrics-auth-sealed-secret.yaml
   all                regenerate all
 
 Values are read from k8s/.env (see k8s/.env.example).
@@ -100,12 +102,26 @@ gen_traefik_dashboard() {
     manifests/platform/traefik/dashboard-auth-sealed-secret.yaml
 }
 
+gen_victoriametrics() {
+  require VICTORIAMETRICS_USER
+  require VICTORIAMETRICS_PASSWORD
+  local htpasswd
+  if command -v htpasswd >/dev/null 2>&1; then
+    htpasswd="$(htpasswd -nbB "$VICTORIAMETRICS_USER" "$VICTORIAMETRICS_PASSWORD")"
+  else
+    htpasswd="$VICTORIAMETRICS_USER:$(openssl passwd -apr1 "$VICTORIAMETRICS_PASSWORD")"
+  fi
+  echo "victoriametrics:"
+  reseal victoriametrics-auth external users "$htpasswd" \
+    manifests/services/external/victoriametrics-auth-sealed-secret.yaml
+}
+
 # --- entry point ---------------------------------------------------------
 
 [[ $# -eq 1 ]] || { usage; exit 1; }
 case "$1" in
   -h|--help) usage; exit 0 ;;
-  cloudflare|pihole|traefik-dashboard|all) target=$1 ;;
+  cloudflare|pihole|traefik-dashboard|victoriametrics|all) target=$1 ;;
   *) usage; exit 1 ;;
 esac
 
@@ -125,5 +141,6 @@ case "$target" in
   cloudflare)        gen_cloudflare ;;
   pihole)            gen_pihole ;;
   traefik-dashboard) gen_traefik_dashboard ;;
-  all)               gen_cloudflare; gen_pihole; gen_traefik_dashboard ;;
+  victoriametrics)   gen_victoriametrics ;;
+  all)               gen_cloudflare; gen_pihole; gen_traefik_dashboard; gen_victoriametrics ;;
 esac
