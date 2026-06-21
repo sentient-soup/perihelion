@@ -50,8 +50,9 @@ docker/             # phis4 compose stack (see docker/README.md)
 | `metallb-system` | MetalLB load balancer |
 | `cert-manager` | cert-manager |
 | `platform` | Headlamp UI |
-| `networking` | Pihole, nginx |
+| `networking` | Pihole |
 | `apps` | Homeassist, Apseline |
+| `external` | Routes to off-cluster phis4 services (ExternalName + IngressRoute) |
 | `traefik` | Traefik ingress controller |
 
 ## MetalLB IP allocations
@@ -63,7 +64,6 @@ Pool range: `192.168.1.220–250`
 | 192.168.1.220 | Pihole |
 | 192.168.1.221 | ArgoCD |
 | 192.168.1.226 | Traefik |
-| 192.168.1.227 | nginx |
 | 192.168.1.228 | Headlamp |
 
 To pin a specific IP, use the annotation (not the deprecated `spec.loadBalancerIP`):
@@ -77,9 +77,9 @@ metadata:
 
 For apps in `k8s/apps/` that use Helm sources, `targetRevision` is the chart semver. For apps using a `path:` source (Git), `targetRevision` is a git ref (`HEAD`, branch, tag). Check latest chart versions at the chart's GitHub releases page — Artifact Hub can lag.
 
-## Active migration: nginx → Traefik
+## Routing (Traefik)
 
-nginx (`k8s/manifests/services/nginx/`) is a raw nginx deployment (not the nginx-ingress controller) being phased out. Traefik (`k8s/apps/platform/traefik.yaml`) is the target ingress controller. New routing should be built as Traefik `IngressRoute` CRDs, not nginx config. cloudflared has been removed — there is no public tunnel; access is LAN-only via MetalLB + split-horizon DNS.
+Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all routing is Traefik `IngressRoute` CRDs. The previous raw nginx reverse proxy (an in-cluster Deployment on node `phis1`, served from `/srv/nginx`) has been removed. cloudflared has been removed (there is no public tunnel); access is LAN-only via MetalLB + split-horizon DNS.
 
 **Routing pattern (copy these for new services):**
 - A default `TLSStore` (`k8s/manifests/platform/traefik/tlsstore.yaml`) points at the `wildcard-perihelion-tls` secret, so any `IngressRoute` with `tls: {}` gets the wildcard cert — no per-service cert secrets needed.

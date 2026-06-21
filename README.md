@@ -23,8 +23,9 @@ side's secrets tooling.
 ## Status
 
 The phis4 docker migration is **complete**: the decomposed stack in `docker/`
-is live on the host (the old monolith is archived off to the side). On the k8s
-side, the nginx → Traefik routing migration is still underway.
+is live on the host (the old monolith is archived off to the side). The k8s
+nginx → Traefik routing migration is also **complete**: Traefik is the sole
+ingress controller and the old nginx reverse proxy has been removed.
 
 ## Secrets
 

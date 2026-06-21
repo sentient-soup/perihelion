@@ -11,7 +11,7 @@ k8s/
   apps/                     # one ArgoCD Application per file
     infra/                  #   metallb, sealed-secrets, cert-manager (+ config)
     platform/               #   argocd, traefik, headlamp
-    services/               #   pihole, nginx, homeassist, apseline
+    services/               #   pihole, homeassist, apseline, external
   manifests/                # raw manifests referenced by path-based apps
     infra/ platform/ services/
   scripts/generate-secret.sh  # sealed-secrets generation (offline)
@@ -38,8 +38,9 @@ ClusterIssuer (`0`) → traefik chart (`1`) → `traefik-config` Certificate (`2
 | `metallb-system` | MetalLB |
 | `cert-manager` | cert-manager |
 | `platform` | Headlamp UI |
-| `networking` | Pihole, nginx |
+| `networking` | Pihole |
 | `apps` | Homeassist, Apseline |
+| `external` | Routes to off-cluster phis4 services (ExternalName) |
 | `traefik` | Traefik ingress controller |
 
 ## MetalLB
@@ -51,7 +52,6 @@ Pool: `192.168.1.220–250`
 | 192.168.1.220 | Pihole |
 | 192.168.1.221 | ArgoCD |
 | 192.168.1.226 | Traefik |
-| 192.168.1.227 | nginx |
 | 192.168.1.228 | Headlamp |
 
 Pin an IP with the annotation (not the deprecated `spec.loadBalancerIP`):
@@ -65,8 +65,8 @@ metadata:
 ## Routing (Traefik)
 
 Access is LAN-only: MetalLB + split-horizon DNS (Pihole resolves
-`*.perihelion.live` to Traefik's LB IP). nginx is being phased out in favor
-of Traefik `IngressRoute` CRDs.
+`*.perihelion.live` to Traefik's LB IP). Traefik is the sole ingress
+controller; all routing is Traefik `IngressRoute` CRDs.
 
 For a new service:
 
@@ -82,6 +82,13 @@ For a new service:
 Reference examples: `manifests/platform/headlamp/ingressroute.yaml` (plain
 app) and `manifests/platform/traefik/dashboard.yaml` (`api@internal` behind a
 `basicAuth` middleware).
+
+For services that run **off-cluster** on the phis4 docker host, see the
+`external` namespace (`manifests/services/external/`): each is an
+`ExternalName` Service pointed at `192.168.1.215` plus an `IngressRoute`. This
+needs `providers.kubernetesCRD.allowExternalNameServices: true` on the Traefik
+chart — see CLAUDE.md for why ExternalName rather than a selectorless Service +
+EndpointSlice.
 
 ## TLS
 
