@@ -36,6 +36,12 @@ include:
       - .env
       - services/cadence/.secrets.env
 
+  # Sink (audiobook/ebook ingest; auto-updated via watchtower)
+  - path: services/sink/compose.yaml
+    env_file:
+      - .env
+      - services/sink/.secrets.env
+
   # Monitoring (victoriametrics, node_exporter, cadvisor)
   - path: services/monitoring/compose.yaml
     env_file: .env

@@ -1,0 +1,28 @@
+# Sink — media ingest tool (audiobooks/ebooks): web upload, metadata match,
+# transfer into the library. File-based config, no DB. Docs: ../../README.md
+#
+# Auto-updated: tracks :latest and carries the watchtower opt-in label, like
+# cadence (see services/watchtower/).
+
+services:
+  sink:
+    image: ghcr.io/sentient-soup/sink:latest
+    container_name: sink
+    restart: unless-stopped
+    ports:
+      - ${SINK_PORT}:6720
+    volumes:
+      # File-based config (SINK_DATA_DIR points here).
+      - ${CONFIG_DIR}/sink/data:/data
+      # Uploads land here; .tus-incoming staging must share this volume for
+      # fast (rename, not copy) moves.
+      - ${CONFIG_DIR}/sink/ingest:/ingest
+      # Transfer destination: the audiobookshelf library.
+      - ${DATA_DIR}/books:/books
+    environment:
+      - SINK_DATA_DIR=/data
+      - TZ=${TZ}
+    env_file:
+      - .secrets.env
+    labels:
+      - com.centurylinklabs.watchtower.enable=true

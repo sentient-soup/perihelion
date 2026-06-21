@@ -1,0 +1,30 @@
+# sink.perihelion.live -> sink on phis4:6720
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sink
+  namespace: external
+spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
+  ports:
+    - port: 6720
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sink
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`sink.perihelion.live`)
+      kind: Rule
+      services:
+        - name: sink
+          port: 6720
+      middlewares:
+        - name: web-security-headers
+  tls: {}
