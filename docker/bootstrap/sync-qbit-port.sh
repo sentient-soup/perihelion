@@ -11,6 +11,15 @@
 # export QBIT_PASS before running or add it to a sourced env file.
 set -euo pipefail
 
+# Pull QBIT_USER/QBIT_PASS from the ingest secrets file if present, so cron can
+# run without inline env. ponytail: reuse the existing secrets file, no new
+# mechanism. WEBUI creds must be set in qBittorrent and mirrored there.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SECRETS_FILE="${SCRIPT_DIR}/../services/ingest/.secrets.env"
+if [[ -f "${SECRETS_FILE}" ]]; then
+    set -a; source "${SECRETS_FILE}"; set +a
+fi
+
 # Defaults match docker/.env (cron runs without it): QBIT_WEBUI_PORT=8085,
 # gluetun control server published on 127.0.0.1:8000.
 GLUETUN_API="${GLUETUN_API:-http://localhost:8000}"
