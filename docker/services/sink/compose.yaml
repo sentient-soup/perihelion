@@ -12,15 +12,15 @@ services:
     ports:
       - ${SINK_PORT}:6720
     volumes:
-      # File-based config (SINK_DATA_DIR points here).
-      - ${CONFIG_DIR}/sink/data:/data
-      # Uploads land here; .tus-incoming staging must share this volume for
-      # fast (rename, not copy) moves.
-      - ${CONFIG_DIR}/sink/ingest:/ingest
-      # Transfer destination: the audiobookshelf library.
+      # App config + state (config.json). Small, lives with your other configs.
+      - ${CONFIG_DIR}/sink:/config
+      # Upload dropzone. .tus-incoming staging sits inside this mount, so
+      # completed uploads move by rename (same volume), not copy.
+      - ${DATA_DIR}/ingest:/ingest
+      # Destination: your existing Audiobookshelf library.
       - ${DATA_DIR}/books:/books
     environment:
-      - SINK_DATA_DIR=/data
+      - SINK_DATA_DIR=/config
       - TZ=${TZ}
     env_file:
       - .secrets.env
