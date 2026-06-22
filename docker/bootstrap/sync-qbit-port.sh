@@ -7,13 +7,13 @@
 #   */5 * * * * /opt/homelab/docker/bootstrap/sync-qbit-port.sh >> /var/log/qbit-port-sync.log 2>&1
 #
 # Requires: curl, jq
-# qBittorrent must have the Web UI enabled. If you've set a password,
-# export QBIT_PASS before running or add it to a sourced env file.
+# Auth: qBittorrent >=5.2.0 API key (Preferences > WebUI > API Key). Set
+# QBIT_API_KEY in services/ingest/.secrets.env. Bearer-key auth is stateless —
+# no login/SID/Referer dance, and it bypasses the WebUI CSRF check.
 set -euo pipefail
 
-# Pull QBIT_USER/QBIT_PASS from the ingest secrets file if present, so cron can
-# run without inline env. ponytail: reuse the existing secrets file, no new
-# mechanism. WEBUI creds must be set in qBittorrent and mirrored there.
+# Pull QBIT_API_KEY from the ingest secrets file if present, so cron can run
+# without inline env. ponytail: reuse the existing secrets file, no new mechanism.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SECRETS_FILE="${SCRIPT_DIR}/../services/ingest/.secrets.env"
 if [[ -f "${SECRETS_FILE}" ]]; then
@@ -24,11 +24,12 @@ fi
 # gluetun control server published on 127.0.0.1:8000.
 GLUETUN_API="${GLUETUN_API:-http://localhost:8000}"
 QBIT_HOST="${QBIT_HOST:-http://localhost:${QBIT_WEBUI_PORT:-8085}}"
-QBIT_USER="${QBIT_USER:-admin}"
-QBIT_PASS="${QBIT_PASS:-}"
+QBIT_API_KEY="${QBIT_API_KEY:-}"
 
-COOKIE_JAR="$(mktemp)"
-trap 'rm -f "${COOKIE_JAR}"' EXIT
+if [[ -z "${QBIT_API_KEY}" ]]; then
+    echo "$(date -Iseconds) ERROR: QBIT_API_KEY not set (see services/ingest/.secrets.env)" >&2
+    exit 1
+fi
 
 # --- Get forwarded port from Gluetun control server ---
 # /v1/portforward is the current path ({"port":N}); /v1/openvpn/portforwarded
@@ -40,32 +41,13 @@ if [[ -z "${FORWARDED_PORT}" || "${FORWARDED_PORT}" == "0" ]]; then
     exit 1
 fi
 
-# --- Authenticate with qBittorrent Web API ---
-# qBittorrent's CSRF protection requires a Referer header matching QBIT_HOST,
-# else state-changing requests return 403 (empty body under curl -f).
-LOGIN_RESULT=$(curl -sf \
-    -e "${QBIT_HOST}" \
-    -c "${COOKIE_JAR}" \
-    "${QBIT_HOST}/api/v2/auth/login" \
-    --data-urlencode "username=${QBIT_USER}" \
-    --data-urlencode "password=${QBIT_PASS}")
-
-if [[ "${LOGIN_RESULT}" != "Ok." ]]; then
-    echo "$(date -Iseconds) ERROR: qBittorrent login failed (response: ${LOGIN_RESULT})" >&2
-    exit 1
-fi
-
-SID=$(grep -oP '(?<=\tSID\t)[^\t\n]+' "${COOKIE_JAR}" || true)
-if [[ -z "${SID}" ]]; then
-    echo "$(date -Iseconds) ERROR: No SID cookie received from qBittorrent" >&2
-    exit 1
-fi
-
-# --- Update listen port ---
-curl -sf \
-    -e "${QBIT_HOST}" \
-    -b "SID=${SID}" \
+# --- Update listen port (stateless Bearer-key auth) ---
+if ! curl -sf \
+    -H "Authorization: Bearer ${QBIT_API_KEY}" \
     "${QBIT_HOST}/api/v2/app/setPreferences" \
-    --data "json={\"listen_port\":${FORWARDED_PORT}}" > /dev/null
+    --data "json={\"listen_port\":${FORWARDED_PORT}}" > /dev/null; then
+    echo "$(date -Iseconds) ERROR: qBittorrent setPreferences failed (check QBIT_API_KEY / WebUI reachable)" >&2
+    exit 1
+fi
 
 echo "$(date -Iseconds) INFO: qBittorrent listen port set to ${FORWARDED_PORT}"
