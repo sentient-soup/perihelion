@@ -28,6 +28,7 @@ services:
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY=${PROTON_WIREGUARD_PRIVATE_KEY}
       - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES}
+      - SERVER_CITIES=${VPN_SERVER_CITIES}
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - PORT_FORWARD_ONLY=on
@@ -143,6 +144,11 @@ services:
     restart: unless-stopped
 
   # SEEDBOXAPI — MAM seedbox IP sync; runs inside gluetun so MAM sees the VPN IP.
+  # The MAM session (mam_id) is ASN-locked: it only works while gluetun's exit IP
+  # stays within the session's locked ASN list. Proton spreads US servers across
+  # several upstream ASNs, so gluetun pins SERVER_CITIES (see .env) to hold the
+  # ASN steady. If MAM logs "Invalid session - ASN mismatch", the exit moved;
+  # check the live ASN via dynamicSeedbox.php and add it to the MAM lock list.
   seedboxapi:
     # Upstream publishes no version tags; digest pins the 2026-06 pull.
     image: myanonamouse/seedboxapi:latest@sha256:4712ede49e8c17ca1aee4cf61a145e249ddbb9498390b469c64b0b3086628259
