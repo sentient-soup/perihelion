@@ -1,0 +1,10 @@
+# Gluetun control-server auth (v3.40+ denies all routes by default).
+# Bind-mounted read-only to /gluetun/auth/config.toml (see compose.yaml).
+# These routes are read-only GETs and the control server is published on
+# loopback only (127.0.0.1:8000), so auth="none" is acceptable.
+# ponytail: auth=none, switch to auth="apikey" if the control server is ever
+# bound beyond loopback.
+[[roles]]
+name = "host-scripts"
+routes = ["GET /v1/openvpn/portforwarded", "GET /v1/publicip/ip"]
+auth = "none"

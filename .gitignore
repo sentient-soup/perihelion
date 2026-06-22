@@ -5,6 +5,7 @@
 
 # temp staging area
 /tmp/
+/archive/
 
 # Local secret values consumed by k8s/scripts/generate-secret.sh — never commit
 # (anchored: docker/.env is non-sensitive and IS committed)

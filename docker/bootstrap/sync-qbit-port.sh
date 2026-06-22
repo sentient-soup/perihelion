@@ -22,6 +22,8 @@ COOKIE_JAR="$(mktemp)"
 trap 'rm -f "${COOKIE_JAR}"' EXIT
 
 # --- Get forwarded port from Gluetun control server ---
+# Path is /v1/openvpn/portforwarded even on WireGuard; the control server
+# requires auth (v3.40+) — allowed via gluetun-auth.toml.
 FORWARDED_PORT=$(curl -sf "${GLUETUN_API}/v1/openvpn/portforwarded" | jq -r '.port // empty')
 
 if [[ -z "${FORWARDED_PORT}" || "${FORWARDED_PORT}" == "0" ]]; then

@@ -9,7 +9,7 @@ services:
     # Digest pin: gluetun's `latest` tracks master, and this build (pulled
     # 2026-06) is newer than the newest release tag (v3.41.1). At next
     # maintenance, switch to a release tag — note v3.40+ requires an auth
-    # config for control-server routes (affects sync-qbit-port.sh).
+    # config for control-server routes — now provided by gluetun-auth.toml.
     image: qmcgaw/gluetun:latest@sha256:5665416a97ad2823dda6986a581b8913cc3af1b196ac768f5130abad4b0d4f62
     container_name: gluetun
     cap_add:
@@ -22,6 +22,9 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ${CONFIG_DIR}/gluetun:/gluetun
+      # Control-server auth (v3.40+ denies routes by default). Allows the
+      # host scripts' read-only GETs; see gluetun-auth.toml.
+      - ./gluetun-auth.toml:/gluetun/auth/config.toml:ro
     environment:
       - TZ=${TZ}
       - VPN_SERVICE_PROVIDER=protonvpn
