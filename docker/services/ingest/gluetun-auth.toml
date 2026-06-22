@@ -6,5 +6,5 @@
 # bound beyond loopback.
 [[roles]]
 name = "host-scripts"
-routes = ["GET /v1/openvpn/portforwarded", "GET /v1/publicip/ip"]
+routes = ["GET /v1/portforward", "GET /v1/publicip/ip"]
 auth = "none"
