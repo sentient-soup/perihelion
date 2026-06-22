@@ -41,7 +41,10 @@ if [[ -z "${FORWARDED_PORT}" || "${FORWARDED_PORT}" == "0" ]]; then
 fi
 
 # --- Authenticate with qBittorrent Web API ---
+# qBittorrent's CSRF protection requires a Referer header matching QBIT_HOST,
+# else state-changing requests return 403 (empty body under curl -f).
 LOGIN_RESULT=$(curl -sf \
+    -e "${QBIT_HOST}" \
     -c "${COOKIE_JAR}" \
     "${QBIT_HOST}/api/v2/auth/login" \
     --data-urlencode "username=${QBIT_USER}" \
@@ -60,6 +63,7 @@ fi
 
 # --- Update listen port ---
 curl -sf \
+    -e "${QBIT_HOST}" \
     -b "SID=${SID}" \
     "${QBIT_HOST}/api/v2/app/setPreferences" \
     --data "json={\"listen_port\":${FORWARDED_PORT}}" > /dev/null
