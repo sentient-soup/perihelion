@@ -7,6 +7,7 @@
 #   ./k8s/scripts/generate-secret.sh pihole             # Pihole admin password
 #   ./k8s/scripts/generate-secret.sh traefik-dashboard  # Traefik dashboard basic-auth
 #   ./k8s/scripts/generate-secret.sh victoriametrics    # VictoriaMetrics remote-write basic-auth
+#   ./k8s/scripts/generate-secret.sh apseline           # Apseline HUD secrets
 #   ./k8s/scripts/generate-secret.sh all                # regenerate all
 #
 # Secret values are read from k8s/.env (git-ignored; see k8s/.env.example).
@@ -39,6 +40,7 @@ Targets:
   pihole             Pihole admin password  -> k8s/manifests/services/pihole/sealed-secret.yaml
   traefik-dashboard  Dashboard basic-auth   -> k8s/manifests/platform/traefik/dashboard-auth-sealed-secret.yaml
   victoriametrics    VM remote-write auth   -> k8s/manifests/services/external/victoriametrics-auth-sealed-secret.yaml
+  apseline           Apseline HUD secrets   -> k8s/manifests/services/apseline/sealed-secret.yaml
   all                regenerate all
 
 Values are read from k8s/.env (see k8s/.env.example).
@@ -71,6 +73,32 @@ reseal() {
   | kubeseal "${seal_args[@]}" -o yaml \
   > "$out"
   echo "  wrote $outfile  (secret $namespace/$name, key $key)"
+}
+
+# reseal_multi <secret-name> <namespace> <output-path-relative-to-k8s/> <key=value>...
+# Same as reseal but for secrets with more than one key.
+reseal_multi() {
+  local name=$1 namespace=$2 outfile=$3; shift 3
+  local out="$K8S_ROOT/$outfile"
+  mkdir -p "$(dirname "$out")"
+
+  local seal_args
+  if [[ -f "$CERT_FILE" ]]; then
+    seal_args=(--cert "$CERT_FILE")
+  else
+    seal_args=(--controller-namespace "$CONTROLLER_NS")
+  fi
+
+  local lits=() keys=() kv
+  for kv in "$@"; do lits+=(--from-literal="$kv"); keys+=("${kv%%=*}"); done
+
+  kubectl create secret generic "$name" \
+    --namespace "$namespace" \
+    "${lits[@]}" \
+    --dry-run=client -o yaml \
+  | kubeseal "${seal_args[@]}" -o yaml \
+  > "$out"
+  echo "  wrote $outfile  (secret $namespace/$name, keys: ${keys[*]})"
 }
 
 gen_cloudflare() {
@@ -116,12 +144,24 @@ gen_victoriametrics() {
     manifests/services/external/victoriametrics-auth-sealed-secret.yaml
 }
 
+gen_apseline() {
+  require APSELINE_SESSION_SECRET
+  require CLOUDFLARE_API_TOKEN
+  echo "apseline:"
+  # OAUTH_CLIENT_SECRET is optional (OAuth is off by default); seal it empty if unset.
+  reseal_multi apseline-secrets apps \
+    manifests/services/apseline/sealed-secret.yaml \
+    SESSION_SECRET="$APSELINE_SESSION_SECRET" \
+    CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" \
+    OAUTH_CLIENT_SECRET="${APSELINE_OAUTH_CLIENT_SECRET:-}"
+}
+
 # --- entry point ---------------------------------------------------------
 
 [[ $# -eq 1 ]] || { usage; exit 1; }
 case "$1" in
   -h|--help) usage; exit 0 ;;
-  cloudflare|pihole|traefik-dashboard|victoriametrics|all) target=$1 ;;
+  cloudflare|pihole|traefik-dashboard|victoriametrics|apseline|all) target=$1 ;;
   *) usage; exit 1 ;;
 esac
 
@@ -142,5 +182,6 @@ case "$target" in
   pihole)            gen_pihole ;;
   traefik-dashboard) gen_traefik_dashboard ;;
   victoriametrics)   gen_victoriametrics ;;
-  all)               gen_cloudflare; gen_pihole; gen_traefik_dashboard; gen_victoriametrics ;;
+  apseline)          gen_apseline ;;
+  all)               gen_cloudflare; gen_pihole; gen_traefik_dashboard; gen_victoriametrics; gen_apseline ;;
 esac
