@@ -1,0 +1,22 @@
+# perihelion.live (apex) -> apseline HUD. The wildcard cert in the default
+# TLSStore covers the apex (it's a SAN on wildcard-perihelion-tls), so tls: {}
+# just works. If you'd rather not take over the root domain, swap the Host to
+# `hud.perihelion.live` (also covered by the wildcard) and update CLIENT_URL /
+# OAUTH_REDIRECT_URI in apseline.yaml to match.
+#
+# Add a Pihole local-DNS A record: perihelion.live -> 192.168.1.226 (Traefik LB).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: apseline
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`perihelion.live`)
+      kind: Rule
+      services:
+        - name: apseline
+          port: 80
+  tls: {}

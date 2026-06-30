@@ -1,0 +1,106 @@
+# Apseline: single-container homelab HUD (frontend + API on :3001).
+# Reads cluster state in-cluster via @kubernetes/client-node, so it needs a
+# ServiceAccount with read access. No database anymore (the old postgres +
+# split web/api deployments are gone).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: apseline
+  namespace: apps
+---
+# ponytail: read-only cluster access is all kubernetes.ts uses today
+# (list namespaces/services/pods/nodes/ingresses). Add write verbs here if the
+# HUD ever scales/deletes workloads.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: apseline-readonly
+rules:
+  - apiGroups: [""]
+    resources: [namespaces, services, pods, nodes]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: apseline-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: apseline-readonly
+subjects:
+  - kind: ServiceAccount
+    name: apseline
+    namespace: apps
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apseline-config
+  namespace: apps
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  CLIENT_URL: "https://perihelion.live"
+  VM_URL: "http://phis4.perihelion.live:8428"
+  # OAuth is off by default; flip to "true" and fill the *_URL/CLIENT_ID below
+  # once an identity provider is wired up. The secret half lives in the
+  # SealedSecret (OAUTH_CLIENT_SECRET).
+  OAUTH_ENABLED: "false"
+  OAUTH_CLIENT_ID: "apseline"
+  OAUTH_ISSUER_URL: ""
+  OAUTH_REDIRECT_URI: "https://perihelion.live/auth/callback"
+  OAUTH_SCOPE: "openid profile email"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apseline
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: apseline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: apseline
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: apseline
+    spec:
+      serviceAccountName: apseline
+      containers:
+        - name: apseline
+          image: ghcr.io/sentient-soup/apseline:master
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: apseline-config
+            - secretRef:
+                name: apseline-secrets
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apseline
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: apseline
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: apseline
