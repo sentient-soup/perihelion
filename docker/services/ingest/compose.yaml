@@ -133,7 +133,7 @@ services:
   # BOOKSHELF — book/audiobook manager (Readarr successor, Hardcover metadata).
   bookshelf:
     # `hardcover` is a rolling tag; digest pins build 24f2b995-ls28 (2026-01-31).
-    image: ghcr.io/pennydreadful/bookshelf:hardcover@sha256:388eecc94362580eae31ee0a454be6af516f8a311f8432a521c202fb475f4359
+    image: ghcr.io/klein1jo/bookshelf:hardcover-v0.4.21.3
     container_name: bookshelf
     environment:
       - PUID=${PUID}
