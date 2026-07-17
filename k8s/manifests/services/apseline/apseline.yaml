@@ -76,7 +76,7 @@ spec:
       serviceAccountName: apseline
       containers:
         - name: apseline
-          image: ghcr.io/sentient-soup/apseline:master
+          image: ghcr.io/sentient-soup/apseline:orbital
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
