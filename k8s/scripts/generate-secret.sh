@@ -169,13 +169,32 @@ command -v kubectl  >/dev/null 2>&1 || die "kubectl not found on PATH"
 command -v kubeseal >/dev/null 2>&1 || die "kubeseal not found on PATH"
 [[ -f "$ENV_FILE" ]] || die ".env not found at $ENV_FILE (copy k8s/.env.example to k8s/.env)"
 
-# Load .env: export every assignment, then stop exporting. Strip carriage
-# returns so a Windows/CRLF-edited .env doesn't bake a trailing \r into values
-# (which silently corrupts secrets — e.g. an htpasswd user "admin\r").
-set -a
-# shellcheck disable=SC1090
-source <(tr -d '\r' < "$ENV_FILE")
-set +a
+# Load .env WITHOUT sourcing it. Secrets routinely contain characters the shell
+# would act on (spaces, ;, &, $, backticks), so `source` both corrupts values and
+# lets .env run arbitrary commands. Parse each KEY=VALUE literally instead:
+# values need no quoting and are taken verbatim to end-of-line.
+#
+# Trailing \r is stripped so a Windows/CRLF-edited .env doesn't bake it into a
+# value (which silently corrupts secrets, e.g. an htpasswd user "admin\r").
+# Surrounding quotes, if present, are stripped so old quoted .env files still work.
+while IFS= read -r line || [[ -n "$line" ]]; do
+  line="${line%$'\r'}"
+  [[ -z "$line" || "$line" == '#'* ]] && continue
+  [[ "$line" == *=* ]] || continue
+
+  key="${line%%=*}"
+  val="${line#*=}"
+
+  # Ignore anything that isn't a plain shell-safe variable name.
+  [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+
+  if [[ ${#val} -ge 2 && ( "$val" == \"*\" || "$val" == \'*\' ) ]]; then
+    val="${val:1:${#val}-2}"
+  fi
+
+  printf -v "$key" '%s' "$val"
+  export "${key?}"
+done < "$ENV_FILE"
 
 case "$target" in
   cloudflare)        gen_cloudflare ;;
