@@ -163,6 +163,38 @@ spec:
         - name: web-security-headers
   tls: {}
 # ===========================================================================
+# bazarr.perihelion.live -> :6767
+# ===========================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bazarr
+  namespace: external
+spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
+  ports:
+    - port: 6767
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: bazarr
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`bazarr.perihelion.live`)
+      kind: Rule
+      services:
+        - name: bazarr
+          port: 6767
+      middlewares:
+        - name: web-security-headers
+  tls: {}
+# ===========================================================================
 # readarr.perihelion.live -> :8787
 # ===========================================================================
 ---
