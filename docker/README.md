@@ -13,6 +13,7 @@ docker/
   services/<group>/.secrets.env        # real secret values (gitignored, host-only)
   bootstrap/setup.sh           # one-time directory provisioning
   bootstrap/sync-qbit-port.sh  # cron: gluetun forwarded port → qBittorrent
+  bootstrap/restart-vpn-stack.sh # restart gluetun + everything in its netns
 ```
 
 ## Deploy
@@ -103,6 +104,27 @@ WireGuard key at <https://account.proton.me/u/0/vpn/WireGuard> →
 ProtonVPN assigns a random forwarded port; `bootstrap/sync-qbit-port.sh`
 (cron, every 5 min) reads it from gluetun's control server and updates
 qBittorrent's listen port.
+
+### Never redeploy gluetun on its own
+
+Recreating gluetun builds a new network sandbox. Its dependents stay attached
+to the old one and go **silently** unreachable: containers still show `Up`,
+their logs stay clean, but the published port now points into the new sandbox
+where nothing listens, so Traefik returns 502. The tell is `docker ps` showing
+a dependent with a longer uptime than gluetun. This also happens unattended
+when gluetun crashes and `restart: unless-stopped` brings it back.
+
+Use the script, which recreates gluetun plus every service that declares
+`network_mode: service:gluetun`:
+
+```bash
+bootstrap/restart-vpn-stack.sh
+```
+
+`docker compose up -d` on the whole stack is also safe (compose cascades the
+recreate). What breaks things is `docker compose up -d gluetun` or
+`docker restart gluetun`. Restarting a dependent *alone* is fine and needs no
+script.
 
 ## First-run configuration order (ingest)
 
