@@ -115,6 +115,21 @@ services:
       - "${SONARR_PORT}:8989"
     restart: unless-stopped
 
+  # BAZARR — subtitle manager for Radarr/Sonarr.
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:1.6.0-ls356
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR}/bazarr:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - "${BAZARR_PORT}:6767"
+    restart: unless-stopped
+
   # LIDARR — music manager.
   lidarr:
     image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls30

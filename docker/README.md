@@ -79,6 +79,7 @@ ${DATA_DIR}/
 | ingest | Prowlarr | 9696 | |
 | ingest | FlareSolverr | 8191 | |
 | ingest | Radarr / Sonarr / Lidarr | 7878 / 8989 / 8686 | |
+| ingest | Bazarr | 6767 | subtitles for Radarr/Sonarr |
 | ingest | Bookshelf | 8787 | |
 | ingest | Jellyseerr | 5055 | |
 | photos | Immich | 2283 | |
@@ -111,8 +112,10 @@ qBittorrent's listen port.
 3. **Prowlarr** — add indexers; connect Radarr/Sonarr/Lidarr/Bookshelf as apps
 4. **Radarr / Sonarr / Lidarr** — root folders `/data/movies`, `/data/shows`,
    `/data/music`; download client qBittorrent at `gluetun:8080`
-5. **Bookshelf** — root folder `/data/books`; prefer M4B over MP3
-6. **Jellyseerr** — connect Jellyfin, then Radarr + Sonarr
+5. **Bazarr** — connect Radarr/Sonarr (host IP, API keys from their Settings →
+   General); add subtitle providers; languages profile on `/data` paths
+6. **Bookshelf** — root folder `/data/books`; prefer M4B over MP3
+7. **Jellyseerr** — connect Jellyfin, then Radarr + Sonarr
 
 ## Image pinning / updates
 
