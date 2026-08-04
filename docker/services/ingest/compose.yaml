@@ -117,7 +117,7 @@ services:
 
   # BAZARR — subtitle manager for Radarr/Sonarr.
   bazarr:
-    image: lscr.io/linuxserver/bazarr:1.6.0-ls356
+    image: lscr.io/linuxserver/bazarr:v1.6.0-ls356
     container_name: bazarr
     environment:
       - PUID=${PUID}
