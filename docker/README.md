@@ -208,12 +208,11 @@ Exceptions:
   `services/vaultwarden/compose.yaml` and `docker compose up -d vaultwarden`.
   `${CONFIG_DIR}/vaultwarden` is the entire vault (SQLite + attachments + RSA
   keys). `bootstrap/backup-vaultwarden.sh` (cron, nightly) tars a consistent
-  snapshot of it into `${CONFIG_DIR}/backups/vaultwarden`, keeping 30 days -
-  that is same-pool, so point restic/rsync at that directory for the off-host
-  copy before cancelling the Bitwarden subscription. Restore: stop the
-  container, untar over an empty `${CONFIG_DIR}/vaultwarden`, start it. Mobile
-  push is off (needs a Bitwarden install id/key); clients still sync when
-  opened.
+  snapshot of it to `${CONFIG_DIR}/backups/vaultwarden/vaultwarden.tar.gz`,
+  replacing it each run; the host's rsync mirror carries it off-box. Restore:
+  stop the container, untar over an empty `${CONFIG_DIR}/vaultwarden`, start
+  it. Mobile push is off (needs a Bitwarden install id/key); clients still
+  sync when opened.
 - **Immich DB password** (`IMMICH_DB_PASSWORD`) is baked into the Postgres data
   dir at first init. On a rebuild/restore it must match the original value or
   immich-server can't connect to its database.
