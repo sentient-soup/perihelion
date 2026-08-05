@@ -14,17 +14,20 @@
 #
 # Requires: sqlite3 on the host (apt install sqlite3)
 #
-# Restore: stop vaultwarden, copy this db.sqlite3 over
-# ${CONFIG_DIR}/vaultwarden/db.sqlite3 (delete any -wal/-shm alongside it),
-# start it.
+# Restore: stop vaultwarden, copy backup/db.sqlite3 up over the db.sqlite3
+# beside it (delete any -wal/-shm first), start it.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/../.env"
 
-SRC="${CONFIG_DIR}/vaultwarden/db.sqlite3"
-DEST_DIR="${CONFIG_DIR}/vaultwarden-backup"
+VAULT_DIR="${CONFIG_DIR}/vaultwarden"
+SRC="${VAULT_DIR}/db.sqlite3"
+# Nested inside the vault dir, which is bind-mounted as the container's /data.
+# Vaultwarden only touches the paths it creates there, so an extra backup/ is
+# ignored by it and picked up by the mirror along with everything else.
+DEST_DIR="${VAULT_DIR}/backup"
 DEST="${DEST_DIR}/db.sqlite3"
 
 if ! command -v sqlite3 > /dev/null; then

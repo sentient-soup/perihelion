@@ -210,10 +210,9 @@ Exceptions:
   keys), and the host's rsync mirror already carries all of it. The one file
   rsync can't copy safely is the WAL-mode SQLite db, so
   `bootstrap/backup-vaultwarden.sh` (cron, nightly, before the mirror) writes a
-  locked, verified copy to `${CONFIG_DIR}/vaultwarden-backup/db.sqlite3` for
-  the mirror to pick up. Restore: stop the container, copy that db over
-  `${CONFIG_DIR}/vaultwarden/db.sqlite3` (dropping any `-wal`/`-shm`), start
-  it. Mobile push is off (needs a Bitwarden install id/key); clients still
+  locked, verified copy to `${CONFIG_DIR}/vaultwarden/backup/db.sqlite3` for
+  the mirror to pick up. Restore: stop the container, copy that db up one level
+  over `db.sqlite3` (dropping any `-wal`/`-shm`), start it. Mobile push is off (needs a Bitwarden install id/key); clients still
   sync when opened.
 - **Immich DB password** (`IMMICH_DB_PASSWORD`) is baked into the Postgres data
   dir at first init. On a rebuild/restore it must match the original value or
