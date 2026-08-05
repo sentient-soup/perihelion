@@ -56,6 +56,7 @@ mkdir -p \
     "${CONFIG_DIR}/audiobookshelf/metadata" \
     "${CONFIG_DIR}/immich/db" \
     "${CONFIG_DIR}/metrics" \
+    "${CONFIG_DIR}/vaultwarden" \
     "${CONFIG_DIR}/odysseus/data" \
     "${CONFIG_DIR}/odysseus/logs" \
     "${CONFIG_DIR}/odysseus/searxng" \

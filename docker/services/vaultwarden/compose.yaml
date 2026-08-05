@@ -1,0 +1,32 @@
+# Vaultwarden - self-hosted Bitwarden-compatible server (Rust reimplementation
+# of the Bitwarden API). Official Bitwarden self-host needs a multi-container
+# stack + MSSQL; Vaultwarden is one container + SQLite and speaks to the stock
+# Bitwarden clients/extensions. ponytail: one container, no external DB - SQLite
+# is the upstream default and fine for a single-user vault.
+#
+# Docs: ../../README.md
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.37.1
+    container_name: vaultwarden
+    restart: unless-stopped
+    ports:
+      - ${VAULTWARDEN_PORT}:80
+    volumes:
+      # SQLite db, attachments, sends, RSA keys. This directory IS the vault -
+      # back it up (see README).
+      - ${CONFIG_DIR}/vaultwarden:/data
+    environment:
+      # Must match the URL clients use, exactly. WebAuthn/passkeys, attachment
+      # links and email links all derive from it.
+      - DOMAIN=https://vault.perihelion.live
+      # Open only long enough to create your account, then set false and
+      # `docker compose up -d vaultwarden`. See README.
+      - SIGNUPS_ALLOWED=true
+      # Traefik forwards the client IP here; without it the failed-login log
+      # records the proxy's address.
+      - IP_HEADER=X-Forwarded-For
+      - TZ=${TZ}
+    env_file:
+      - .secrets.env

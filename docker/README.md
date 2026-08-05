@@ -14,6 +14,7 @@ docker/
   bootstrap/setup.sh           # one-time directory provisioning
   bootstrap/sync-qbit-port.sh  # cron: gluetun forwarded port → qBittorrent
   bootstrap/restart-vpn-stack.sh # restart gluetun + everything in its netns
+  bootstrap/backup-vaultwarden.sh # cron: nightly vault snapshot
 ```
 
 ## Deploy
@@ -30,13 +31,15 @@ sudo bash bootstrap/setup.sh
 cp services/ingest/.secrets.env.example services/ingest/.secrets.env
 cp services/photos/.secrets.env.example services/photos/.secrets.env
 cp services/odysseus/.secrets.env.example services/odysseus/.secrets.env
-${EDITOR:-nano} services/ingest/.secrets.env services/photos/.secrets.env services/odysseus/.secrets.env
+cp services/vaultwarden/.secrets.env.example services/vaultwarden/.secrets.env
+${EDITOR:-nano} services/ingest/.secrets.env services/photos/.secrets.env services/odysseus/.secrets.env services/vaultwarden/.secrets.env
 
 # 4. Start everything
 docker compose up -d
 
-# 5. Install the port-sync cron
+# 5. Install the crons
 # */5 * * * * /opt/homelab/docker/bootstrap/sync-qbit-port.sh >> /var/log/qbit-port-sync.log 2>&1
+# 30 3 * * *  /opt/homelab/docker/bootstrap/backup-vaultwarden.sh >> /var/log/vaultwarden-backup.log 2>&1
 ```
 
 ## Secrets
@@ -87,6 +90,7 @@ ${DATA_DIR}/
 | files | Nextcloud AIO admin | 8080 (apache on 11000) | |
 | books | Audiobookshelf | 13378 | |
 | cadence | Cadence | `${CADENCE_PORT}` = 3000 | fitness tracker; `:latest` + watchtower auto-update |
+| vaultwarden | Vaultwarden | `${VAULTWARDEN_PORT}` = 8222 | password vault; HTTPS-only via Traefik |
 | monitoring | VictoriaMetrics | 8428 | scrape config: `${CONFIG_DIR}/metrics/scrape.yml` |
 | monitoring | cAdvisor | 8081 | |
 | monitoring | node_exporter | host network (9100) | |
@@ -199,6 +203,17 @@ Exceptions:
   are not part of the compose project and keep running through a `compose down`
   (Nextcloud serves traffic across a stack restart). `NEXTCLOUD_DATADIR` is fixed
   at install time — changing it later is ignored.
+- **Vaultwarden:** first run has `SIGNUPS_ALLOWED=true`. Create your account at
+  <https://vault.perihelion.live>, then flip it to `false` in
+  `services/vaultwarden/compose.yaml` and `docker compose up -d vaultwarden`.
+  `${CONFIG_DIR}/vaultwarden` is the entire vault (SQLite + attachments + RSA
+  keys). `bootstrap/backup-vaultwarden.sh` (cron, nightly) tars a consistent
+  snapshot of it into `${CONFIG_DIR}/backups/vaultwarden`, keeping 30 days -
+  that is same-pool, so point restic/rsync at that directory for the off-host
+  copy before cancelling the Bitwarden subscription. Restore: stop the
+  container, untar over an empty `${CONFIG_DIR}/vaultwarden`, start it. Mobile
+  push is off (needs a Bitwarden install id/key); clients still sync when
+  opened.
 - **Immich DB password** (`IMMICH_DB_PASSWORD`) is baked into the Postgres data
   dir at first init. On a rebuild/restore it must match the original value or
   immich-server can't connect to its database.

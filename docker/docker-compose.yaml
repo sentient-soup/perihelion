@@ -42,6 +42,12 @@ include:
       - .env
       - services/sink/.secrets.env
 
+  # Vaultwarden (password vault). Its .secrets.env is read at the service level
+  # only - the Argon2 admin token is full of `$` and has no business going
+  # through compose interpolation.
+  - path: services/vaultwarden/compose.yaml
+    env_file: .env
+
   # Monitoring (victoriametrics, node_exporter, cadvisor)
   - path: services/monitoring/compose.yaml
     env_file: .env
