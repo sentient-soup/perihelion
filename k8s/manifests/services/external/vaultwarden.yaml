@@ -1,0 +1,33 @@
+# vault.perihelion.live -> vaultwarden on phis4:8222
+# Bitwarden clients refuse anything but HTTPS, and the web vault needs
+# window.crypto.subtle, which browsers only expose on a secure origin - so this
+# route (wildcard cert via the default TLSStore) is the only way in.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultwarden
+  namespace: external
+spec:
+  type: ExternalName
+  externalName: "192.168.1.215"
+  ports:
+    - port: 8222
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vaultwarden
+  namespace: external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`vault.perihelion.live`)
+      kind: Rule
+      services:
+        - name: vaultwarden
+          port: 8222
+      middlewares:
+        - name: web-security-headers
+  tls: {}
