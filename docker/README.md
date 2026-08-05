@@ -14,7 +14,7 @@ docker/
   bootstrap/setup.sh           # one-time directory provisioning
   bootstrap/sync-qbit-port.sh  # cron: gluetun forwarded port → qBittorrent
   bootstrap/restart-vpn-stack.sh # restart gluetun + everything in its netns
-  bootstrap/backup-vaultwarden.sh # cron: nightly vault snapshot
+  bootstrap/backup-vaultwarden.sh # cron: consistent copy of the vault db
 ```
 
 ## Deploy
@@ -207,10 +207,12 @@ Exceptions:
   <https://vault.perihelion.live>, then flip it to `false` in
   `services/vaultwarden/compose.yaml` and `docker compose up -d vaultwarden`.
   `${CONFIG_DIR}/vaultwarden` is the entire vault (SQLite + attachments + RSA
-  keys). `bootstrap/backup-vaultwarden.sh` (cron, nightly) tars a consistent
-  snapshot of it to `${CONFIG_DIR}/backups/vaultwarden/vaultwarden.tar.gz`,
-  replacing it each run; the host's rsync mirror carries it off-box. Restore:
-  stop the container, untar over an empty `${CONFIG_DIR}/vaultwarden`, start
+  keys), and the host's rsync mirror already carries all of it. The one file
+  rsync can't copy safely is the WAL-mode SQLite db, so
+  `bootstrap/backup-vaultwarden.sh` (cron, nightly, before the mirror) writes a
+  locked, verified copy to `${CONFIG_DIR}/vaultwarden-backup/db.sqlite3` for
+  the mirror to pick up. Restore: stop the container, copy that db over
+  `${CONFIG_DIR}/vaultwarden/db.sqlite3` (dropping any `-wal`/`-shm`), start
   it. Mobile push is off (needs a Bitwarden install id/key); clients still
   sync when opened.
 - **Immich DB password** (`IMMICH_DB_PASSWORD`) is baked into the Postgres data
