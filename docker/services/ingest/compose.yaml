@@ -194,6 +194,27 @@ services:
       - "${JELLYSEERR_PORT}:5055"
     restart: unless-stopped
 
+  # CLEANUPARR: queue janitor for the *arr stack. Strikes stalled / failed-import
+  # / malware downloads, removes + blocks them, and re-triggers a search.
+  # All config lives in its web UI (nothing is env-driven); see README first-run.
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:2.10.5
+    container_name: cleanuparr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - PORT=11011
+    volumes:
+      - ${CONFIG_DIR}/cleanuparr:/config
+      # Only the orphan/hardlink cleanup features touch the filesystem, and they
+      # need the same paths qBittorrent sees. Uncomment when enabling those,
+      # it gives a delete-happy container rw on the whole media root.
+      # - ${DATA_DIR}:/data
+    ports:
+      - "${CLEANUPARR_PORT}:11011"
+    restart: unless-stopped
+
   # READARR — optional audiobook manager (see README: Optional services).
   # readarr:
   #   image: lscr.io/linuxserver/readarr:amd64-nightly-0.4.19.2808-ls399

@@ -86,6 +86,7 @@ ${DATA_DIR}/
 | ingest | Bazarr | 6767 | subtitles for Radarr/Sonarr |
 | ingest | Bookshelf | 8787 | |
 | ingest | Jellyseerr | 5055 | |
+| ingest | Cleanuparr | `${CLEANUPARR_PORT}` = 11011 | queue janitor; all config in its own UI |
 | photos | Immich | 2283 | |
 | files | Nextcloud AIO admin | 8080 (apache on 11000) | |
 | books | Audiobookshelf | 13378 | |
@@ -142,6 +143,24 @@ script.
    General); add subtitle providers; languages profile on `/data` paths
 6. **Bookshelf** — root folder `/data/books`; prefer M4B over MP3
 7. **Jellyseerr** — connect Jellyfin, then Radarr + Sonarr
+8. **Cleanuparr** - download client qBittorrent at `http://gluetun:8080`
+   (qBittorrent shares gluetun's netns, so that is its container DNS name);
+   *arr apps at `http://radarr:7878`, `http://sonarr:8989`, `http://lidarr:8686`,
+   `http://bookshelf:8787` with their API keys. Then enable jobs one at a time.
+   Start with **Queue Cleaner only** (stalled / failed-import / malware). It
+   works off the *arr queues, so anything already imported and seeding is
+   invisible to it, so manual seed-time overrides in qBittorrent are safe.
+
+   Leave **Download Cleaner off**. It is the one job that acts on completed,
+   seeding torrents, and qBittorrent's own share limits already cover that,
+   with per-torrent overrides that Cleanuparr does not read. Two systems with
+   opinions about seed time is how a forever-seeder gets deleted.
+
+   Belt and braces regardless: tag keepers `keep` in qBittorrent and add `keep`
+   to **Ignored Downloads** on both jobs (it matches hash, tag, category, or
+   tracker domain). Also leave `Delete private torrents` off: private torrents
+   hitting max strikes then leave the *arr queue but keep seeding, which is what
+   avoids an H&R on MAM.
 
 ## Image pinning / updates
 
@@ -198,6 +217,15 @@ Exceptions:
   (fixed name) and `immich-model-cache` (regenerable ML cache).
 - **Never `docker compose down -v`** — `-v` deletes named volumes, including the
   Nextcloud AIO master volume.
+- **Named volumes live on the root LV**, not the pool — `jellyfin-cache` and
+  `immich-model-cache` land in `/var/lib/docker` on `ubuntu-vg/ubuntu-lv`
+  (nvme). That is deliberate: both are hot, high-churn caches that want the
+  SSD, not mergerfs. It is only safe because the LV was extended to fill its
+  volume group (the Ubuntu installer carved out just 100 GiB of the 928 GiB
+  nvme); watch `node_filesystem_avail_bytes{mountpoint="/"}` rather than
+  relocating them. Jellyfin only reclaims transcode segments when a session
+  ends *cleanly* — orphans from abrupt client disconnects wait for the daily
+  **Clean Transcode Directory** scheduled task.
 - **Nextcloud AIO:** only `nextcloud-aio-mastercontainer` is compose-managed. It
   spawns the other `nextcloud-aio-*` containers via the Docker socket, so they
   are not part of the compose project and keep running through a `compose down`
