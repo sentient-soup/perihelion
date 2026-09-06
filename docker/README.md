@@ -57,11 +57,21 @@ group needs. Compose reads `.secrets.env` via the `env_file` lists in
 
 ## Storage layout
 
-`/mnt/phis4/hot` is **ssd1, bind-mounted**. mergerfs was retired on
-2026-09-05 after ssd2 dropped off the USB bus and took the whole pool down
-with it: mergerfs has no redundancy, so every read through the pool hit the
-dead branch and returned EIO, which is what broke Jellyfin. Media moves to a
-dedicated drive nested at `/mnt/phis4/hot/media`.
+`/mnt/phis4/hot` is **ssd1, mounted directly**, with the media drive nested
+at `/mnt/phis4/hot/media`. Every drive gets exactly one mountpoint: no binds,
+no pools. mergerfs was retired on 2026-09-05 after ssd2 dropped off the USB
+bus and took the whole pool down with it: mergerfs has no redundancy, so every
+read through the pool hit the dead branch and returned EIO, which is what
+broke Jellyfin.
+
+Two things that will confuse you later:
+
+- **`hot` means the live tier, not the SSD.** Config sits on ssd1; the media
+  drive nested inside it is a 7.3T spinning disk. The name predates the split
+  and is kept because renaming it would repoint every container.
+- **Stop copyparty before unmounting the hot tier.** It holds `/mnt/phis4/hot`
+  open and is the usual culprit behind `target is busy`. `docker compose stop`
+  does not cover it, since it is not (yet) in the compose stack.
 
 Always use `/mnt/phis4/hot`, never a member disk (e.g. `/mnt/phis4/ssd1`).
 The paths below are unchanged from the mergerfs era on purpose - absolute
