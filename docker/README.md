@@ -15,6 +15,7 @@ docker/
   bootstrap/sync-qbit-port.sh  # cron: gluetun forwarded port → qBittorrent
   bootstrap/restart-vpn-stack.sh # restart gluetun + everything in its netns
   bootstrap/backup-vaultwarden.sh # cron: consistent copy of the vault db
+  bootstrap/backup-tier.sh     # cron: guarded hot/cold tier mirror
 ```
 
 ## Deploy
@@ -56,10 +57,19 @@ group needs. Compose reads `.secrets.env` via the `env_file` lists in
 
 ## Storage layout
 
-`/mnt/phis4/hot` is the **mergerfs pool** — always use it, never a member
-disk (e.g. `/mnt/phis4/ssd1`).
+`/mnt/phis4/hot` is **ssd1, bind-mounted**. mergerfs was retired on
+2026-09-05 after ssd2 dropped off the USB bus and took the whole pool down
+with it: mergerfs has no redundancy, so every read through the pool hit the
+dead branch and returned EIO, which is what broke Jellyfin. Media moves to a
+dedicated drive nested at `/mnt/phis4/hot/media`.
 
-- `CONFIG_DIR=/mnt/phis4/hot/data` — per-service config/state
+Always use `/mnt/phis4/hot`, never a member disk (e.g. `/mnt/phis4/ssd1`).
+The paths below are unchanged from the mergerfs era on purpose - absolute
+paths are denormalized into half a dozen application databases (*arr root
+folders, Jellyfin libraries, Immich, and Nextcloud's immutable
+`NEXTCLOUD_DATADIR`), so the hardware moved underneath them instead.
+
+- `CONFIG_DIR=/mnt/phis4/hot/config` — per-service config/state
 - `DATA_DIR=/mnt/phis4/hot/media` — all media, mounted as `/data` in every
   ingest container so hardlinks work (TRaSH-guide single-root approach):
 
@@ -220,7 +230,7 @@ Exceptions:
 - **Named volumes live on the root LV**, not the pool — `jellyfin-cache` and
   `immich-model-cache` land in `/var/lib/docker` on `ubuntu-vg/ubuntu-lv`
   (nvme). That is deliberate: both are hot, high-churn caches that want the
-  SSD, not mergerfs. It is only safe because the LV was extended to fill its
+  SSD, not the media tier. It is only safe because the LV was extended to fill its
   volume group (the Ubuntu installer carved out just 100 GiB of the 928 GiB
   nvme); watch `node_filesystem_avail_bytes{mountpoint="/"}` rather than
   relocating them. Jellyfin only reclaims transcode segments when a session
