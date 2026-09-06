@@ -47,7 +47,10 @@ mkdir -p "$DEST"
 # Circuit breaker. A normal run deletes a handful of files, so a hundred means
 # the source is wrong rather than the data being gone. Raise it if a genuine
 # library cleanup ever trips it.
-if ! rsync -avh --delete --max-delete=100 --stats "$SRC/" "$DEST/"; then
+# -H preserves hardlinks. Libraries and torrents/ deliberately share one
+# filesystem so *arr imports hardlink rather than copy; without -H every
+# linked file is written twice and the backup inflates past the source.
+if ! rsync -avhH --delete --max-delete=100 --stats "$SRC/" "$DEST/"; then
     rc=$?
     echo "ABORT: rsync exited ${rc} (25 = --max-delete tripped, source is suspect)"
     exit "$rc"
