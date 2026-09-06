@@ -44,14 +44,25 @@ fi
 
 mkdir -p "$DEST"
 
-# Circuit breaker. A normal run deletes a handful of files, so a hundred means
-# the source is wrong rather than the data being gone. Raise it if a genuine
-# library cleanup ever trips it.
+# Circuit breaker, sized against ~250k files in the hot tier. It has to clear
+# routine churn (Jellyfin rewrites its metadata cache constantly, which alone
+# is over a thousand deletions after a couple of days) while still catching a
+# source that has genuinely emptied out. The sentinel above is the real guard
+# for that; this is the backstop behind it.
+#
+# Note --max-delete is a stop, not a veto: rsync deletes up to the limit
+# before giving up, so a tripped run has already removed that many files.
+MAX_DELETE=5000
+
 # -H preserves hardlinks. Libraries and torrents/ deliberately share one
 # filesystem so *arr imports hardlink rather than copy; without -H every
 # linked file is written twice and the backup inflates past the source.
-if ! rsync -avhH --delete --max-delete=100 --stats "$SRC/" "$DEST/"; then
-    rc=$?
+#
+# rc is captured off ||, not inside `if ! rsync`: there $? is the status of
+# the negation and always reads 0.
+rc=0
+rsync -avhH --delete --max-delete="$MAX_DELETE" --stats "$SRC/" "$DEST/" || rc=$?
+if [ "$rc" -ne 0 ]; then
     echo "ABORT: rsync exited ${rc} (25 = --max-delete tripped, source is suspect)"
     exit "$rc"
 fi
