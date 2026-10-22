@@ -21,6 +21,12 @@ services:
       - WATCHTOWER_LABEL_ENABLE=true   # only update containers with the enable label
       - WATCHTOWER_CLEANUP=true        # prune the old image after a successful update
       - WATCHTOWER_POLL_INTERVAL=300   # check the registry every 5 min
+      - WATCHTOWER_NOTIFICATION_REPORT=true  # one summary per run, not a line per log event
+    # WATCHTOWER_NOTIFICATION_URL (the Discord webhook) comes from here. Read at
+    # the service level, not via the root include, so the token never goes
+    # through compose interpolation.
+    env_file:
+      - .secrets.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Private GHCR packages: create the auth file on the host (see README),
