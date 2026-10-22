@@ -14,6 +14,10 @@
 # from being tried, and must not make smartd think the handler crashed.
 set -uo pipefail
 
+# smartd hands handlers a minimal environment and smartctl lives in /usr/sbin,
+# so pin PATH instead of trusting whatever we were launched with.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 CONF=/etc/default/smartd-notify
 # shellcheck source=/dev/null
 [ -r "$CONF" ] && . "$CONF"
@@ -35,6 +39,11 @@ read_serial() {
 }
 SERIAL="$(read_serial)"
 [ -z "$SERIAL" ] && SERIAL="$(read_serial -d sat)"
+if [ -z "$SERIAL" ]; then
+    # An alert with no serial is unactionable, so leave the reason in the journal.
+    why="$(smartctl -d sat -i "$DEV" 2>&1 | head -5 | tr '\n' '|')"
+    logger -t smartd-notify -p daemon.warning "serial lookup failed for ${DEV}: ${why}"
+fi
 SERIAL="${SERIAL:-unknown}"
 
 HOST="$(hostname -s)"
