@@ -18,6 +18,9 @@ DISCORD_WEBHOOK=
 # Optional ping prefix. The server defaults to "only @mentions", so without this
 # the alert posts but your phone stays quiet. A role is <@&ROLE_ID>, a user is
 # <@USER_ID> (Developer Mode > right-click > Copy ID). Leave empty for no ping.
+# This file is sourced by bash, so the value MUST be double-quoted or the shell
+# reads < & > as redirection and the script breaks:
+#   DISCORD_MENTION="<@&ROLE_ID>"
 DISCORD_MENTION=
 
 # ntfy: the instance already running on phis4 (see NTFY_BASE_URL in docker/.env).
