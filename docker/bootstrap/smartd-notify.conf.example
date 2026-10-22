@@ -1,0 +1,31 @@
+# Template for /etc/default/smartd-notify
+#
+# Install with:
+#   sudo cp docker/bootstrap/smartd-notify.conf.example /etc/default/smartd-notify
+#   sudo chown root:root /etc/default/smartd-notify
+#   sudo chmod 600 /etc/default/smartd-notify
+#   sudo nano /etc/default/smartd-notify
+#
+# Both transports are optional and independent. Set either, or both for
+# redundancy. Setting neither means smartd-notify.sh only writes to the journal,
+# which is the same as having no alerting at all.
+
+# Discord: Server Settings > Integrations > Webhooks > New Webhook, then Copy
+# Webhook URL. Works from anywhere with no inbound exposure, which is why it is
+# the better choice for alerts you need to receive off-LAN.
+DISCORD_WEBHOOK=
+
+# Optional ping prefix. The server defaults to "only @mentions", so without this
+# the alert posts but your phone stays quiet. A role is <@&ROLE_ID>, a user is
+# <@USER_ID> (Developer Mode > right-click > Copy ID). Leave empty for no ping.
+DISCORD_MENTION=
+
+# ntfy: the instance already running on phis4 (see NTFY_BASE_URL in docker/.env).
+# Pick any topic name and subscribe to it in the ntfy phone app. The topic name
+# is the only access control on an unauthenticated instance, so make it
+# unguessable rather than "alerts".
+# Reachable off-LAN only over Tailscale, since 8091 is not exposed publicly.
+NTFY_URL=http://192.168.1.215:8091/phis4-smart-REPLACEME
+
+# Only if the ntfy instance requires auth.
+NTFY_TOKEN=
