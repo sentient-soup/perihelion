@@ -15,7 +15,11 @@ spec:
     referrerPolicy: strict-origin-when-cross-origin
 ---
 # Jellyfin's stricter header set (CSP + Permissions-Policy). Kept faithful to the
-# nginx vhost: nosniff + these two, nothing else.
+# nginx vhost: nosniff + these two, nothing else. The Abyss theme needs three
+# relaxations on top: blob: images (Spotlight builds object URLs from fetched
+# artwork), and jsdelivr/Google Fonts for its stylesheet and webfonts.
+# connect-src stays 'self', which blocks Abyss's api.github.com update check.
+# That is deliberate: it is the toast every user sees, not just the admin.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -26,7 +30,7 @@ spec:
     contentTypeNosniff: true
     customResponseHeaders:
       Permissions-Policy: "accelerometer=(), ambient-light-sensor=(), battery=(), bluetooth=(), camera=(), clipboard-read=(), display-capture=(), document-domain=(), encrypted-media=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), interest-cohort=(), keyboard-map=(), local-fonts=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(), serial=(), sync-xhr=(), usb=(), xr-spatial-tracking=()"
-      Content-Security-Policy: "default-src https: data: blob: ; img-src 'self' https://* ; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.youtube.com blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; font-src 'self'"
+      Content-Security-Policy: "default-src https: data: blob: ; img-src 'self' https://* blob: ; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.youtube.com blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com"
 ---
 # qBittorrent rejects WebUI requests whose Referer doesn't match its own origin
 # (CSRF guard). nginx overrode Referer to the backend; do the same here.
