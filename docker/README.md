@@ -272,8 +272,8 @@ wifi_tx_bitrate_mbps
 # the symptom, on the wifi hop alone
 probe_jitter_ms{target="192.168.1.1"}
 
-# the leg beyond the gateway, in isolation
-probe_rtt_ms{target="1.1.1.1"} - probe_rtt_ms{target="192.168.1.1"}
+# the leg beyond the gateway (target labels differ, so match on host)
+probe_rtt_ms{target="1.1.1.1"} - on(host) probe_rtt_ms{target="192.168.1.1"}
 ```
 
 | What moved | Reading |
