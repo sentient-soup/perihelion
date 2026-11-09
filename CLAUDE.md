@@ -79,7 +79,7 @@ For apps in `k8s/apps/` that use Helm sources, `targetRevision` is the chart sem
 
 ## Routing (Traefik)
 
-Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all routing is Traefik `IngressRoute` CRDs. The previous raw nginx reverse proxy (an in-cluster Deployment on node `phis1`, served from `/srv/nginx`) has been removed. cloudflared has been removed (there is no public tunnel); access is LAN-only via MetalLB + split-horizon DNS.
+Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all routing is Traefik `IngressRoute` CRDs. The previous raw nginx reverse proxy (an in-cluster Deployment on node `phis1`, served from `/srv/nginx`) has been removed. cloudflared has been removed (there is no tunnel). LAN clients reach everything via MetalLB + split-horizon DNS (Pihole). A small set of **public** services is also reachable from the internet via a router port forward plus Cloudflare DNS records: Jellyfin (`media`), Audiobookshelf (`books`), Jellyseerr (`request`), Immich (`img`) and Nextcloud (`docs`). Everything else (the *arr apps, dashboards, Vaultwarden, etc.) is LAN-only; remote admin access goes through Tailscale. Adding a host to the public set is a deliberate exposure decision, not just a routing change.
 
 **Routing pattern (copy these for new services):**
 - A default `TLSStore` (`k8s/manifests/platform/traefik/tlsstore.yaml`) points at the `wildcard-perihelion-tls` secret, so any `IngressRoute` with `tls: {}` gets the wildcard cert — no per-service cert secrets needed.
