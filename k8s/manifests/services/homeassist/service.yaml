@@ -5,6 +5,10 @@ metadata:
   namespace: apps
   labels:
     app.kubernetes.io/name: homeassist
+  annotations:
+    # Pinned so a fresh cluster can't hand this Service .220 before Pihole
+    # (same sync wave) claims it.
+    metallb.io/loadBalancerIPs: 192.168.1.222
 spec:
   type: LoadBalancer
   ports:
