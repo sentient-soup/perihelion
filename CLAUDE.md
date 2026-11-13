@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Configuration monorepo for the `perihelion.live` homelab, with two independent deployment surfaces:
 
 - **`k8s/`** — GitOps for the k3s cluster. All cluster state is declared here and applied via ArgoCD. No build steps — changes take effect when pushed to `main` and ArgoCD syncs.
-- **`docker/`** — Docker Compose stack for the standalone media/files node (`phis4`). **Not GitOps**: changes here do nothing until pulled on the host and applied with `docker compose up -d`. See `docker/README.md` for the full deploy/secrets workflow.
+- **`docker/`** — Docker Compose stack for the media/files services on `phis4` (the same host also runs the single k3s node). **Not GitOps**: changes here do nothing until pulled on the host and applied with `docker compose up -d`. See `docker/README.md` for the full deploy/secrets workflow.
 
 Most of this file documents the k8s side; see the Docker node section at the end for the phis4 conventions.
 
@@ -80,7 +80,7 @@ For apps in `k8s/apps/` that use Helm sources, `targetRevision` is the chart sem
 
 ## Routing (Traefik)
 
-Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all routing is Traefik `IngressRoute` CRDs. The previous raw nginx reverse proxy (an in-cluster Deployment on node `phis1`, served from `/srv/nginx`) has been removed. cloudflared has been removed (there is no tunnel). LAN clients reach everything via MetalLB + split-horizon DNS (Pihole). A small set of **public** services is also reachable from the internet via a router port forward plus Cloudflare DNS records: Jellyfin (`media`), Audiobookshelf (`books`), Jellyseerr (`request`), Immich (`img`) and Nextcloud (`docs`). Everything else (the *arr apps, dashboards, Vaultwarden, etc.) is LAN-only; remote admin access goes through Tailscale. Adding a host to the public set is a deliberate exposure decision, not just a routing change.
+Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all routing is Traefik `IngressRoute` CRDs. The previous raw nginx reverse proxy (an in-cluster Deployment) has been removed. cloudflared has been removed (there is no tunnel). LAN clients reach everything via MetalLB + split-horizon DNS (Pihole). A small set of **public** services is also reachable from the internet via a router port forward plus Cloudflare DNS records: Jellyfin (`media`), Audiobookshelf (`books`), Jellyseerr (`request`), Immich (`img`) and Nextcloud (`docs`). Everything else (the *arr apps, dashboards, Vaultwarden, etc.) is LAN-only; remote admin access goes through Tailscale. Adding a host to the public set is a deliberate exposure decision, not just a routing change.
 
 **Routing pattern (copy these for new services):**
 - A default `TLSStore` (`k8s/manifests/platform/traefik/tlsstore.yaml`) points at the `wildcard-perihelion-tls` secret, so any `IngressRoute` with `tls: {}` gets the wildcard cert — no per-service cert secrets needed.
@@ -89,7 +89,7 @@ Traefik (`k8s/apps/platform/traefik.yaml`) is the sole ingress controller; all r
 - Two reference examples: `headlamp/ingressroute.yaml` (plain app that brings its own auth) and `traefik/dashboard.yaml` (internal `api@internal` service protected by the `dashboard-auth` `basicAuth` Middleware).
 - Each new hostname needs a Pihole local-DNS record → `192.168.1.226` (Traefik's LB IP).
 
-**Routing to off-cluster backends (the `external` namespace):** services that run on the phis4 docker host (`192.168.1.215`), not in the cluster, are reverse-proxied by Traefik via the `external` namespace (`k8s/manifests/services/external/`, ArgoCD app `external.yaml`). This replaced the old nginx proxy that ran on phis1. Each host is an **`ExternalName` Service** pointed straight at the IP (`externalName: "192.168.1.215"`) plus a normal `IngressRoute`/middlewares — copy any file there (e.g. `jellyfin.yaml`) as the template. Two non-obvious requirements:
+**Routing to off-cluster backends (the `external` namespace):** services that run in phis4's Docker stack (`192.168.1.215`), outside the cluster, are reverse-proxied by Traefik via the `external` namespace (`k8s/manifests/services/external/`, ArgoCD app `external.yaml`). This replaced the old nginx proxy. Each host is an **`ExternalName` Service** pointed straight at the IP (`externalName: "192.168.1.215"`) plus a normal `IngressRoute`/middlewares — copy any file there (e.g. `jellyfin.yaml`) as the template. Two non-obvious requirements:
   - Traefik rejects ExternalName Services unless `providers.kubernetesCRD.allowExternalNameServices: true` is set in the chart values (`k8s/apps/platform/traefik.yaml`).
   - **Do not** use a selectorless Service + `Endpoints`/`EndpointSlice` for this (the textbook approach): ArgoCD's default `resource.exclusions` drops both kinds, so it silently never applies them and Traefik returns `503 no available server`. ExternalName sidesteps that. A literal IP is a valid `externalName`, so Traefik dials it directly — needed here because the cluster's CoreDNS resolves `*.perihelion.live` to public Cloudflare IPs, not Pihole's LAN records, so a hostname would not resolve to the host.
 
@@ -111,7 +111,7 @@ Domain: `perihelion.live`. cert-manager handles certificate lifecycle (replaces 
 
 ## Docker node (phis4)
 
-`docker/` holds the Compose stack for the standalone media/files host (Jellyfin, *arr ingest behind a gluetun VPN, Immich, Nextcloud AIO, Audiobookshelf, monitoring). Key differences from the k8s side:
+`docker/` holds the Compose stack for phis4's media/files services (Jellyfin, *arr ingest behind a gluetun VPN, Immich, Nextcloud AIO, Audiobookshelf, monitoring). Key differences from the k8s side:
 
 - **This dev machine is NOT the Docker host.** Same split as the k8s side: this is an editing box, phis4 is a separate machine. There is no Docker daemon or `docker` CLI here, and this machine cannot reach phis4 — `docker`/`docker compose` commands (including `compose config` to validate) will fail. Don't try them; produce config changes and hand the user the commands to run on phis4. (A WSL Docker setup for local validation may come later; until then, assume none.)
 - **Not GitOps.** Nothing reconciles automatically — the user pulls on phis4 and runs `docker compose` there.

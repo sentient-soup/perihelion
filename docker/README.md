@@ -240,60 +240,90 @@ invisible to every metric the stack collected before this.
 
 `bootstrap/wifi-probe.sh` (cron, every minute) fills the gap. It pushes radio
 quality and ping latency straight to VictoriaMetrics' import endpoint by IP, so
-it needs no scrape job and does not depend on container-side DNS. Install it on
-both wifi hosts, phis4 for the rich iwlwifi counters and phis1 as a second
-vantage point for the probe:
+it needs no scrape job and does not depend on container-side DNS. On phis4:
 
 ```bash
-# phis4 (repo checked out here)
 # * * * * * /opt/homelab/docker/bootstrap/wifi-probe.sh
-
-# phis1 (no checkout - copy it over)
-scp bootstrap/wifi-probe.sh phis1:/tmp/ \
-  && ssh phis1 'sudo install -m 755 /tmp/wifi-probe.sh /usr/local/bin/ \
-  && ( crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/wifi-probe.sh" ) | crontab -'
 ```
 
 Series: `wifi_signal_dbm`, `wifi_tx_bitrate_mbps`, `wifi_rx_bitrate_mbps`,
 `wifi_tx_retries_total`, `wifi_tx_failed_total`, `wifi_tx_packets_total`,
 `probe_rtt_ms`, `probe_jitter_ms`, `probe_loss_pct`, all labelled by `host`.
-Only what the local driver exposes is emitted: `tx retries` is iwlwifi-only, so
-phis1 contributes `tx failed` and the probe but no retry ratio.
+Only what the local driver exposes is emitted.
 
-Queries for the next high-latency event:
+Queries for the next high-latency event. Use the **hourly median**, not the raw
+series: it separates sustained degradation from the constant per-sample
+spikiness, and it is what made the 10/26 18:52 event visible at all.
 
 ```promql
-# contention: retry ratio (absolute retries just track traffic volume)
-rate(wifi_tx_retries_total{host="phis4"}[5m]) / rate(wifi_tx_packets_total{host="phis4"}[5m])
-
-# rate adaptation backing off a degraded channel
-wifi_tx_bitrate_mbps
-
 # the symptom, on the wifi hop alone
-probe_jitter_ms{target="192.168.1.1"}
+quantile_over_time(0.5, probe_jitter_ms{target="192.168.1.1"}[1h])
+
+# hard evidence: a lost ping to your own gateway means the radio gave up
+probe_loss_pct
 
 # the leg beyond the gateway (target labels differ, so match on host)
 probe_rtt_ms{target="1.1.1.1"} - on(host) probe_rtt_ms{target="192.168.1.1"}
+
+# phis4's own contribution, to check magnitude before blaming it
+rate(node_network_transmit_bytes_total{node="phis4",device="wlp2s0"}[5m]) * 8 / 1e6
 ```
 
 | What moved | Reading |
 |---|---|
-| retry ratio >10%, PHY rate sagging, phis4 TX high | the homelab is the cause; cap Jellyfin or shape `wlp2s0` |
-| retry ratio >10% while phis4 TX is low | other house devices or neighbours on an overlapping 80 MHz block |
-| router RTT high, retry ratio flat | gateway CPU in the forwarding path |
-| WAN leg high, retry ratio and router RTT flat | upstream GPON contention, nothing local |
+| jitter median rises | check phis4's TX magnitude before blaming the homelab |
+| loss to 192.168.1.1 above zero | the radio exhausted its retries; genuine link failure |
+| loss to 1.1.1.1 with none to the router | upstream, nothing local can fix it |
 
-Measured baseline (2026-10-25, phis4): 960/324 Mbps PHY at -57 dBm, lifetime
-retry ratio 0.98%, 73 Mbps peak TX (~13% airtime), zero carrier changes, zero
-`node_softnet_dropped_total`. The 10/22 jitter event left no trace in any of
-it, which is what prompted this script.
+Measured baselines, 2026-10-26/27 over two days, with power save on:
+
+| | phis4 |
+|---|---|
+| jitter to router, hourly median | 11.7 ms (peaks 34-37) |
+| loss to router | zero across two days |
+| TX bandwidth | median 0.41 Mbps, peak 28.57 |
+| PHY rate at signal | 960/324 Mbps at -57 dBm |
+
+Zero router loss over two days means the link itself is sound. phis4's 28.57
+Mbps peak is ~5% airtime at 960 Mbps PHY, so when jitter rises in the evenings
+the homelab is a passenger rather than the cause; the common factor is the
+whole house being active, not Jellyfin.
+
+**`wifi_tx_retries_total` is not a channel sensor.** Retry ratio runs
+*anti*-correlated with traffic: 0.15-0.45 while phis4 is idle, collapsing to
+~0.01 the moment it transmits. A busy link sends large A-MPDUs where BlockAck
+repairs subframes cheaply, while an idle link sends a handful of small frames
+where two retries out of five reads as 40%. Median TX is 0.41 Mbps, so phis4 is
+idle almost always and the metric mostly measures noise in a tiny denominator.
+Still collected, but do not read it as contention.
 
 Channel utilization (`busy_time/active_time` from `iw survey dump`) would beat
-all of the above on its own, but neither iwlwifi on phis4 nor brcmfmac on phis1
-reports survey data; it would take a USB adapter on an `mt76` or `ath9k`
+all of the above on its own, but iwlwifi on phis4 doesn't report survey data; it would take a USB adapter on an `mt76` or `ath9k`
 chipset. Not worth buying for a problem the wired move removes.
 
-**Remove this section, the script and both crons once phis4 is wired.**
+### Never disable wifi power save on phis4
+
+Leave `power_save` on. Turning it off, either at runtime with `iw dev wlp2s0
+set power_save off` or permanently with `options iwlmvm power_scheme=1`,
+collapses the **downlink** to HE-MCS 0 / NSS 1 / 20 MHz / DCM on, which is 3.6
+Mbit/s, while the uplink stays at 960 Mbit/s and the signal stays at -53 dBm.
+Confirmed twice: once at runtime on 2026-10-27 22:30, once as a module
+parameter across a reboot. Rebooting with power save left at its default
+restores it immediately.
+
+NSS and bandwidth are capability decisions rather than link-quality ones, so
+this is the AP's stored picture of phis4's receive capability going wrong, not
+a radio fault. Signal strength is irrelevant to it.
+
+This is not merely a slow server. At 3.6 Mbit/s a 1500-byte frame occupies 3.3
+ms of airtime instead of 12.5 us, roughly 270x, so phis4 in this state starves
+every other device on the 5 GHz channel. It is the likeliest explanation for
+the household-wide slowdowns that prompted this instrumentation.
+
+The price of leaving power save on is about 10 ms of extra jitter on phis4
+(11.7 ms hourly median). That is the better trade.
+
+**Remove this section, the script and its cron once phis4 is wired.**
 
 ## Operational notes
 

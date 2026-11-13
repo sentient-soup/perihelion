@@ -8,17 +8,16 @@
 # is exactly that signature. Retry ratio and negotiated PHY rate are what
 # actually move during an event.
 #
-# Install on each wifi host worth watching: phis4 for the rich iwlwifi
-# counters, phis1 as a second vantage point for the ping probe. Whatever the
-# local driver does not expose is simply not emitted, so one script covers
-# both (brcmfmac on the Pi reports no "tx retries").
+# Install on each wifi host worth watching. Whatever the local driver does not
+# expose is simply not emitted (e.g. brcmfmac reports no "tx retries"), so one
+# script covers any driver.
 #
 # Cron (every minute):
 #   * * * * * /opt/homelab/docker/bootstrap/wifi-probe.sh
 #
 # Requires: iw, curl, iputils-ping. No scrape job needed - this pushes to
 # VictoriaMetrics' import endpoint by IP, which also sidesteps the
-# container-side DNS that cannot resolve phis1.perihelion.live.
+# container-side DNS that cannot resolve *.perihelion.live host names.
 #
 # Deliberately not "set -e": one failed ping or one absent driver counter must
 # still leave the remaining metrics to be pushed. Deliberately not "pipefail"

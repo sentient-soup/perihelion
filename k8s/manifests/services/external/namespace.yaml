@@ -4,7 +4,7 @@
 # EndpointSlice because ArgoCD's default resource.exclusions drops Endpoints and
 # EndpointSlice, so it would never apply them.) Traefik needs
 # providers.kubernetesCRD.allowExternalNameServices=true, set in the chart values
-# in k8s/apps/platform/traefik.yaml. Replaces the old nginx proxy on phis1.
+# in k8s/apps/platform/traefik.yaml. Replaces the old nginx proxy.
 apiVersion: v1
 kind: Namespace
 metadata:
